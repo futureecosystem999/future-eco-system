@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FUTURE-eco-system</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FUTURE">
+    <link rel="apple-touch-icon" href="icon.png">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonconnect/ui@2.0.8/dist/tonconnect-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #050d14;
+            --teal-accent: #00ddb4;
+            --purple-accent: #7c3aed;
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Splash Screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 0.5s ease-in-out 1.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+
+        .splash-content {
+            text-align: center;
+        }
+
+        .splash-bee {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            animation: float 2s infinite ease-in-out;
+        }
+
+        .splash-text {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(to right, var(--teal-accent), var(--purple-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Background Stars */
+        .stars-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #eee, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 50px 160px, #ddd, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 160px 120px, #ddd, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.5;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1001;
+            background: var(--bg-color);
+            border-bottom: 1px solid rgba(0, 221, 180, 0.2);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info {
+            text-align: left;
+        }
+
+        .username {
+            font-size: 12px;
+            color: var(--teal-accent);
+            text-transform: uppercase;
+        }
+
+        .balance-amount {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(to right, var(--teal-accent), var(--purple-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-switcher {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--teal-accent);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            outline: none;
+            font-size: 12px;
+        }
+
+        .login-btn {
+            background: linear-gradient(45deg, var(--teal-accent), #00a89e);
+            color: black;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            background: var(--bg-color);
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Hide TonConnect's auto-injected button widget.
+           It uses position:fixed and covers the nav bar.
+           We use our own custom Connect Wallet buttons. */
+        tc-root {
+            display: none !important;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-weight: bold;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .nav-tab.active {
+            color: var(--teal-accent);
+            border-bottom-color: var(--teal-accent);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            width: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 80px;
+        }
+
+        /* TAP SCREEN */
+        .screen {
+            display: none;
+            width: 100%;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .main-game {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Mascot Container */
+        .mascot-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .mascot-container:active {
+            transform: scale(0.95);
+        }
+
+        /* Glowing Rings */
+        .rings {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border: 2px solid var(--teal-accent);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        .rings::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 1px solid var(--purple-accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite ease-in-out reverse;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.2; }
+            50% { transform: scale(1.1); opacity: 0.5; }
+            100% { transform: scale(0.9); opacity: 0.2; }
+        }
+
+        /* Crystal Bee Mascot (SVG) */
+        .mascot {
+            width: 180px;
+            height: 180px;
+            animation: float 3s infinite ease-in-out;
+            filter: drop-shadow(0 0 15px var(--purple-accent));
+            z-index: 2;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .wing {
+            transform-origin: center;
+            animation: flap 0.2s infinite alternate;
+        }
+
+        @keyframes flap {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(60deg); }
+        }
+
+        /* Progress & Energy */
+        .stats-overlay {
+            width: 85%;
+            margin-bottom: 30px;
+        }
+
+        .level-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--teal-accent), var(--purple-accent));
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .energy-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .energy-icon {
+            color: var(--teal-accent);
+            font-size: 18px;
+        }
+
+        .energy-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .energy-bar-fill {
+            height: 100%;
+            background: var(--teal-accent);
+            width: 100%;
+            transition: width 0.1s;
+        }
+
+        .energy-text {
+            font-size: 14px;
+            width: 60px;
+            text-align: right;
+        }
+
+        /* Cards */
+        .cards-row {
+            display: flex;
+            gap: 15px;
+            width: 85%;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .card-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .card-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--teal-accent);
+        }
+
+        /* LEADERBOARD SCREEN */
+        .leaderboard-container {
+            width: 90%;
+            padding: 20px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .leaderboard-item.current-user {
+            background: rgba(0, 221, 180, 0.1);
+            border-color: var(--teal-accent);
+        }
+
+        .rank {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--teal-accent);
+            min-width: 40px;
+        }
+
+        .rank.medal {
+            font-size: 24px;
+        }
+
+        .user-details {
+            flex: 1;
+            margin-left: 15px;
+        }
+
+        .user-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-level {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .user-balance {
+            font-weight: bold;
+            color: var(--teal-accent);
+        }
+
+        /* TASKS SCREEN */
+        .tasks-container {
+            width: 90%;
+            padding: 20px 0;
+        }
+
+        .task-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .task-reward {
+            font-size: 12px;
+            color: var(--teal-accent);
+        }
+
+        .task-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .task-progress-bar {
+            height: 100%;
+            background: var(--teal-accent);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .task-claim-btn {
+            background: linear-gradient(45deg, var(--teal-accent), #00a89e);
+            color: black;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+
+        .task-claim-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* SHOP SCREEN */
+        .shop-container {
+            width: 90%;
+            padding: 20px 0;
+        }
+
+        .shop-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .shop-item-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .shop-item-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-desc {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .shop-item-price {
+            font-size: 18px;
+            color: var(--teal-accent);
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .buy-btn {
+            background: linear-gradient(45deg, var(--purple-accent), #5b21b6);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Floating Animation */
+        .floating-text {
+            position: absolute;
+            color: var(--teal-accent);
+            font-weight: bold;
+            font-size: 24px;
+            pointer-events: none;
+            animation: floatUp 0.8s forwards;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
+
+        /* Footer Navigation */
+        .footer-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            justify-content: space-around;
+            background: rgba(5, 13, 20, 0.95);
+            border-top: 1px solid rgba(0, 221, 180, 0.2);
+            z-index: 100;
+        }
+
+        .footer-btn {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .footer-btn.active {
+            color: var(--teal-accent);
+            background: rgba(0, 221, 180, 0.1);
+        }
+
+        .boost-active {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(124, 58, 237, 0.2);
+            border: 1px solid var(--purple-accent);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 50;
+        }
+
+        /* WALLET SCREEN */
+        .wallet-container {
+            width: 90%;
+            padding: 20px 0;
+        }
+
+        .wallet-status {
+            background: rgba(0, 221, 180, 0.1);
+            border: 1px solid var(--teal-accent);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .wallet-status-connected {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .wallet-status-dot {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .wallet-status-text {
+            font-weight: bold;
+            color: var(--teal-accent);
+        }
+
+        .wallet-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .wallet-card.connected {
+            border-color: var(--teal-accent);
+            background: rgba(0, 221, 180, 0.05);
+        }
+
+        .wallet-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .wallet-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .wallet-details {
+            text-align: left;
+        }
+
+        .wallet-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .wallet-benefits {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+
+        .wallet-action {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .connect-btn {
+            background: linear-gradient(45deg, var(--teal-accent), #00a89e);
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .connect-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .disconnect-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--teal-accent);
+            border: 1px solid var(--teal-accent);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Connection Popup */
+        .connection-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-color);
+            border: 2px solid var(--teal-accent);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1000;
+            min-width: 280px;
+        }
+
+        .connection-popup.hidden {
+            display: none;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .popup-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 221, 180, 0.2);
+            border-top: 4px solid var(--teal-accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .popup-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: var(--teal-accent);
+        }
+
+        .popup-message {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .success-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+    
+        /* SHOP Screen */
+        .shop-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 15px 100px;
+        }
+
+        .shop-section {
+            margin-bottom: 30px;
+        }
+
+        .shop-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--teal-accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .shop-section:nth-child(3) .shop-section-title {
+            color: #FFD700;
+        }
+
+        .shop-items {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .shop-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 221, 180, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .shop-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--teal-accent);
+            transform: translateY(-2px);
+        }
+
+        .shop-item.vip {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .shop-item.vip:hover {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .shop-item-info {
+            flex: 1;
+        }
+
+        .shop-item-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .shop-item-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-color);
+            margin-bottom: 4px;
+        }
+
+        .shop-item-desc {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.3;
+        }
+
+        .shop-item-price {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+            white-space: nowrap;
+        }
+
+        .shop-item-price-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--teal-accent);
+        }
+
+        .shop-item.vip .shop-item-price-value {
+            color: #FFD700;
+        }
+
+        .shop-buy-btn {
+            background: linear-gradient(135deg, var(--teal-accent), #00a89a);
+            border: none;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .shop-buy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 221, 180, 0.5);
+        }
+
+        .shop-buy-btn:active {
+            transform: scale(0.95);
+        }
+
+        .shop-item.vip .shop-buy-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+        }
+
+        /* Boost Timer in Game Screen */
+        .boost-timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 221, 180, 0.2);
+            border: 1px solid var(--teal-accent);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: var(--teal-accent);
+            font-weight: bold;
+        }
+
+        /* VIP Badge in Header */
+        .vip-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        /* Cosmetic Bee Styles */
+        .bee-golden {
+            filter: hue-rotate(45deg) saturate(2) brightness(1.2);
+        }
+
+        .bee-rainbow {
+            animation: rainbowShift 3s infinite;
+        }
+
+        @keyframes rainbowShift {
+            0% { filter: hue-rotate(0deg); }
+            16% { filter: hue-rotate(60deg); }
+            33% { filter: hue-rotate(120deg); }
+            50% { filter: hue-rotate(180deg); }
+            66% { filter: hue-rotate(240deg); }
+            83% { filter: hue-rotate(300deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .bee-galaxy {
+            filter: hue-rotate(270deg) saturate(1.5) brightness(1.1);
+            animation: galaxyGlow 2s infinite;
+        }
+
+        @keyframes galaxyGlow {
+            0%, 100% { filter: hue-rotate(270deg) saturate(1.5) brightness(1.1) drop-shadow(0 0 5px #7c3aed); }
+            50% { filter: hue-rotate(270deg) saturate(1.5) brightness(1.3) drop-shadow(0 0 15px #7c3aed); }
+        }
+
+        /* Wallet UI Styles */
+        .wallet-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 15px 100px;
+        }
+
+        .wallet-status-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .wallet-status-desc {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wallet-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 221, 180, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--teal-accent);
+            transform: translateY(-2px);
+        }
+
+        .wallet-icon {
+            font-size: 28px;
+        }
+
+        .wallet-info {
+            flex: 1;
+        }
+
+        .wallet-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .wallet-desc {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .wallet-connect-btn {
+            background: linear-gradient(135deg, var(--teal-accent), #00a89a);
+            border: none;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .wallet-connect-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 221, 180, 0.5);
+        }
+
+        .wallet-badge {
+            background: rgba(0, 221, 180, 0.2);
+            border: 1px solid var(--teal-accent);
+            color: var(--teal-accent);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        /* Leaderboard Styles */
+        .leaderboard-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 15px 100px;
+        }
+
+        .leaderboard-header {
+            margin-bottom: 20px;
+        }
+
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .leaderboard-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 221, 180, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--teal-accent);
+        }
+
+        .leaderboard-item.current-user {
+            background: rgba(0, 221, 180, 0.15);
+            border-color: var(--teal-accent);
+            box-shadow: 0 0 15px rgba(0, 221, 180, 0.3);
+        }
+
+        .leaderboard-rank {
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .leaderboard-info {
+            flex: 1;
+        }
+
+        .leaderboard-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .leaderboard-balance {
+            font-size: 11px;
+            color: var(--teal-accent);
+            margin-top: 2px;
+        }
+
+        .leaderboard-level {
+            font-size: 11px;
+            background: rgba(0, 221, 180, 0.2);
+            color: var(--teal-accent);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .friend-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 221, 180, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .friend-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--teal-accent);
+        }
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.js"></script>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen">
+        <div class="splash-content">
+            <svg class="splash-bee" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M100 40 L140 70 L140 130 L100 160 L60 130 L60 70 Z" fill="#00ddb4" opacity="0.8" />
+                <circle cx="100" cy="50" r="15" fill="#00ddb4" />
+            </svg>
+            <div class="splash-text">FUTURE-eco-system</div>
+        </div>
+    </div>
+
+    <div class="stars-container"></div>
+
+    <header>
+        <div class="header-left">
+            <div class="user-info">
+                <div class="username" id="username-display">Guest</div>
+                <div class="balance-amount"><span id="balance">0</span> FUTURE</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <select class="lang-switcher" id="lang-switcher">
+                <option value="en">EN</option>
+                <option value="ru">RU</option>
+                <option value="pt">PT</option>
+                <option value="lt">LT</option>
+            </select>
+            <button class="login-btn" id="login-btn" style="display:none;">Login</button>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" data-screen="tap" id="tab-tap">🎮 TAP</button>
+        <button class="nav-tab" data-screen="leaderboard" id="tab-leaderboard">📊 LEADERBOARD</button>
+        <button class="nav-tab" data-screen="tasks" id="tab-tasks">✅ TASKS</button>
+        <button class="nav-tab" data-screen="shop" id="tab-shop">🛍️ SHOP</button>
+        <button class="nav-tab" data-screen="wallet" id="tab-wallet">💳 WALLET</button>
+        <button class="nav-tab" data-screen="whitepaper" id="tab-whitepaper">📄 WHITEPAPER</button>
+    </div>
+
+    <div class="main-content">
+        <!-- TAP SCREEN -->
+        <div class="screen active" id="screen-tap">
+            <div class="main-game">
+                <div class="mascot-container" id="mascot-btn">
+                    <div class="rings"></div>
+                    <svg class="mascot" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <path class="wing" d="M100 80 Q150 20 180 80 T100 100" fill="rgba(0, 221, 180, 0.4)" stroke="var(--teal-accent)" stroke-width="2" />
+                        <path class="wing" d="M100 80 Q50 20 20 80 T100 100" fill="rgba(0, 221, 180, 0.4)" stroke="var(--teal-accent)" stroke-width="2" style="animation-delay: 0.1s" />
+                        <path d="M100 40 L140 70 L140 130 L100 160 L60 130 L60 70 Z" fill="#7c3aed" opacity="0.8" />
+                        <path d="M100 40 L140 70 L100 100 Z" fill="#9f67ff" />
+                        <path d="M140 70 L140 130 L100 100 Z" fill="#5b21b6" />
+                        <path d="M140 130 L100 160 L100 100 Z" fill="#4c1d95" />
+                        <path d="M100 160 L60 130 L100 100 Z" fill="#5b21b6" />
+                        <path d="M60 130 L60 70 L100 100 Z" fill="#9f67ff" />
+                        <path d="M60 70 L100 40 L100 100 Z" fill="#c084fc" />
+                        <circle cx="100" cy="50" r="15" fill="#00ddb4" />
+                        <circle cx="95" cy="48" r="2" fill="white" />
+                        <circle cx="105" cy="48" r="2" fill="white" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="stats-overlay">
+                <div class="level-info">
+                    <span id="level-name">Crystal Larva</span>
+                    <span id="level-ratio">0/100</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="xp-bar"></div>
+                </div>
+
+                <div class="energy-container">
+                    <div class="energy-icon">⚡</div>
+                    <div class="energy-bar-bg">
+                        <div class="energy-bar-fill" id="energy-bar"></div>
+                    </div>
+                    <div class="energy-text"><span id="energy-val">500</span>/500</div>
+                </div>
+            </div>
+
+            <div class="cards-row">
+                <div class="stat-card">
+                    <div class="card-label" id="text-taps">Total Taps</div>
+                    <div class="card-value" id="total-taps">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="card-label" id="text-friends">Friends</div>
+                    <div class="card-value" id="friends-count">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD SCREEN -->
+        <div class="screen" id="screen-leaderboard">
+            <div class="leaderboard-container">
+                <div id="leaderboard-list"></div>
+            </div>
+        </div>
+
+        <!-- TASKS SCREEN -->
+        <div class="screen" id="screen-tasks">
+            <div class="tasks-container">
+                <div id="tasks-list"></div>
+            </div>
+        </div>
+
+        <!-- SHOP SCREEN -->
+        <div class="screen" id="screen-shop">
+            <div class="shop-container">
+                <!-- BOOSTS Section -->
+                <div class="shop-section">
+                    <div class="shop-section-title">⚡ BOOSTS</div>
+                    <div class="shop-items" id="boosts-list"></div>
+                </div>
+
+                <!-- COSMETICS Section -->
+                <div class="shop-section">
+                    <div class="shop-section-title">💎 COSMETICS</div>
+                    <div class="shop-items" id="cosmetics-list"></div>
+                </div>
+
+                <!-- VIP Section -->
+                <div class="shop-section">
+                    <div class="shop-section-title">👑 VIP MEMBERSHIP</div>
+                    <div class="shop-items" id="vip-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WALLET SCREEN -->
+        <div class="screen" id="screen-wallet">
+            <div class="wallet-container">
+                <div id="wallet-status" class="wallet-status"></div>
+                <div id="wallet-list"></div>
+            </div>
+        </div>
+
+        <div class="screen" id="screen-whitepaper" style="padding:16px 16px 80px;">
+
+            <!-- Header -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:48px;margin-bottom:8px;">🐝</div>
+                <div style="font-size:22px;font-weight:700;color:#00ddb4;letter-spacing:1px;">FUTURE Token</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;">Whitepaper v1.0 | 2026</div>
+            </div>
+
+            <!-- 1. Abstract -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:10px;">📋 1. Abstract</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.7;">FUTURE-eco-system is a Telegram-based tap-to-earn gaming ecosystem built on the TON blockchain. Players earn FUTURE tokens by interacting with the Crystal Bee mascot, completing daily missions, and building referral networks. This document outlines the token economics, distribution model, roadmap, and vision for the FUTURE token.</div>
+            </div>
+
+            <!-- 2. Problem & Solution -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:12px;">⚠️ 2. Problem &amp; Solution</div>
+                <div style="font-size:12px;font-weight:700;color:rgba(255,100,100,0.9);margin-bottom:8px;">2.1 The Problem</div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#ff6464;">✗</span>Traditional gaming offers no real financial rewards for player time</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#ff6464;">✗</span>Crypto projects lack engaging experiences that drive organic growth</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#ff6464;">✗</span>Existing tap-to-earn games have unsustainable token models</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#ff6464;">✗</span>Bee populations worldwide face extinction — environmental awareness is critical</div>
+                </div>
+                <div style="font-size:12px;font-weight:700;color:rgba(0,221,180,0.9);margin-bottom:8px;">2.2 Our Solution</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#00ddb4;">✓</span>A sustainable play-to-earn model with real TON blockchain integration</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#00ddb4;">✓</span>Crystal Bee mascot symbolizing ecological awareness and crypto future</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#00ddb4;">✓</span>4-language support (EN, RU, PT, LT) for global reach</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);display:flex;gap:8px;"><span style="color:#00ddb4;">✓</span>Deflationary tokenomics ensuring long-term value</div>
+                </div>
+            </div>
+
+            <!-- 3. Token Overview -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:12px;">💎 3. Token Overview</div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Token Name</span><span style="font-size:12px;color:#fff;font-weight:600;">FUTURE</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Blockchain</span><span style="font-size:12px;color:#fff;font-weight:600;">TON (The Open Network)</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Total Supply</span><span style="font-size:12px;color:#fff;font-weight:600;">1,000,000,000</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Token Standard</span><span style="font-size:12px;color:#fff;font-weight:600;">Jetton (TON)</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Decimals</span><span style="font-size:12px;color:#fff;font-weight:600;">9</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Ticker</span><span style="font-size:12px;color:#00ddb4;font-weight:700;">FUTURE</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Network</span><span style="font-size:12px;color:#fff;font-weight:600;">Mainnet</span></div>
+            </div>
+
+            <!-- 4. Token Distribution -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:12px;">📊 4. Token Distribution</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Total supply: 1,000,000,000 FUTURE</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🎮 Play-to-Earn</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">40%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">400,000,000</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">💧 Liquidity</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">20%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">200,000,000</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">👥 Team</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">15%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">150,000,000</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🚀 Marketing</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">10%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">100,000,000</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🤝 Partners</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">8%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">80,000,000</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;"><span style="font-size:12px;color:rgba(255,255,255,0.8);">💼 Reserve</span><div style="text-align:right;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">7%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">70,000,000</span></div></div>
+            </div>
+
+            <!-- 5. Earning Mechanisms -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:12px;">⚡ 5. Earning Mechanisms</div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:6px;">5.1 Tap-to-Earn</div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🐝 Tap the Crystal Bee to earn FUTURE tokens</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">📈 Base rate: 1 FUTURE per tap (increases with level)</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">⚡ Energy system: 500 max, regenerates over time</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🏆 6 levels: Crystal Larva → Crystal God</div>
+                </div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:6px;">5.2 Referral System</div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🔗 Each user receives a unique referral code</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🎁 Referral bonus: +500 FUTURE for both parties</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">♾️ No limit on referrals — unlimited earning potential</div>
+                </div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:6px;">5.3 Daily Missions</div>
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">✅ Tap 500 times today → +200 FUTURE</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">✅ Invite 1 friend → +500 FUTURE</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">✅ Open app 3 days in a row → +1,000 FUTURE</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🔄 Missions reset every 24 hours</div>
+                </div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:6px;">5.4 In-App Boosts</div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">⚡ Energy x2 — 1 TON → 2x energy regen for 1h</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">💰 Coins x3 — 2 TON → Triple coins per tap for 1h</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">♾️ Infinite Energy — 0.5 TON → 30 minutes</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🔥 Mega Tap — 3 TON → x10 coins for 15 minutes</div>
+                </div>
+            </div>
+
+            <!-- 6. Deflationary Mechanics -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:10px;">🔥 6. Deflationary Mechanics</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6;margin-bottom:10px;">FUTURE token is designed to decrease in supply over time, creating upward price pressure:</div>
+                <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="color:#7c3aed;">🔥</span><span style="font-size:12px;color:rgba(255,255,255,0.7);">50% of all Shop revenue is burned permanently</span></div>
+                <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="color:#7c3aed;">🔥</span><span style="font-size:12px;color:rgba(255,255,255,0.7);">Withdrawal fee: 2 TON — 50% burned, 50% to ecosystem fund</span></div>
+                <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="color:#7c3aed;">🔥</span><span style="font-size:12px;color:rgba(255,255,255,0.7);">Monthly token burn events based on community vote</span></div>
+                <div style="display:flex;gap:8px;padding:7px 0;"><span style="color:#7c3aed;">🔥</span><span style="font-size:12px;color:rgba(255,255,255,0.7);">VIP membership fees partially burned</span></div>
+            </div>
+
+            <!-- 7. Staking & Governance -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:12px;">🏦 7. Staking &amp; Governance</div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:8px;">7.1 Staking</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                    <div style="background:rgba(0,221,180,0.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">30 days</div><div style="font-size:16px;font-weight:700;color:#00ddb4;">5%</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">APY</div></div>
+                    <div style="background:rgba(0,221,180,0.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">90 days</div><div style="font-size:16px;font-weight:700;color:#00ddb4;">12%</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">APY</div></div>
+                    <div style="background:rgba(0,221,180,0.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">180 days</div><div style="font-size:16px;font-weight:700;color:#00ddb4;">20%</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">APY</div></div>
+                    <div style="background:rgba(124,58,237,0.15);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(124,58,237,0.4);"><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">365 days</div><div style="font-size:16px;font-weight:700;color:#c084fc;">35%</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">APY</div></div>
+                </div>
+
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:8px;">7.2 Governance</div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">🗳️ Token holders vote on key protocol decisions</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">⚖️ 1 FUTURE = 1 vote</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">📋 Proposals: new features, burn amounts, partner listings</div>
+                </div>
+            </div>
+
+            <!-- 8. Roadmap -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:12px;">🗺️ 8. Roadmap</div>
+
+                <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">Phase 1 — Launch</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q1 2026</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);">Telegram Mini App · Crystal Bee mechanics · TON wallet · 4 languages · Referral system</div>
+                </div>
+                <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;color:#00ddb4;font-weight:700;">Phase 2 — Growth</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q2 2026</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);">FUTURE token on TON mainnet · Ston.fi DEX listing · 100,000 users · Marketing campaign</div>
+                </div>
+                <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;color:#7c3aed;font-weight:700;">Phase 3 — Expansion</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q3 2026</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);">MEXC &amp; Gate.io listings · Staking platform · NFT Crystal Bee collection · 500,000 users</div>
+                </div>
+                <div style="padding:10px 0;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;color:#7c3aed;font-weight:700;">Phase 4 — Ecosystem</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q4 2026</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.6);">Governance voting · FUTURE DeFi · Cross-chain bridge (TON ↔ BNB) · 1,000,000 users · CEX tier-1</div>
+                </div>
+            </div>
+
+            <!-- 9. Team & Vision -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:10px;">👥 9. Team &amp; Vision</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.7;">FUTURE-eco-system was founded with a clear vision: to combine environmental awareness with the power of blockchain technology. Our Crystal Bee mascot represents the critical importance of bee populations to our ecosystem, while our token economy creates real value for early adopters.</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.7;margin-top:10px;">We believe the next wave of crypto adoption will come through engaging gaming experiences on platforms like Telegram, where 900 million users already exist. FUTURE-eco-system is positioned at the intersection of gaming, DeFi, and environmental consciousness.</div>
+            </div>
+
+            <!-- 10. Legal Disclaimer -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.6);margin-bottom:10px;">⚖️ 10. Legal Disclaimer</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.7;font-style:italic;">This whitepaper is for informational purposes only and does not constitute financial or investment advice. Cryptocurrency investments carry significant risk. Past performance is not indicative of future results. Always conduct your own research before investing.</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.7;font-style:italic;margin-top:8px;">FUTURE tokens are utility tokens used within the FUTURE-eco-system ecosystem. They do not represent ownership, equity, or any other financial instrument.</div>
+            </div>
+
+            <!-- 11. Contact & Community -->
+            <div style="background:rgba(0,221,180,0.05);border:1px solid rgba(0,221,180,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;color:#00ddb4;margin-bottom:12px;">📬 11. Contact &amp; Community</div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Telegram Bot</span><span style="font-size:12px;color:#00ddb4;font-weight:600;">@FutureEcoSystemBot</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Web App</span><span style="font-size:11px;color:#00ddb4;font-weight:600;">futureecosystem999.github.io</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">TON Wallet</span><span style="font-size:12px;color:#fff;font-family:monospace;">UQCcc-bk...RpiZE</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Email</span><span style="font-size:12px;color:#00ddb4;font-weight:600;">futureecosystem999@gmail.com</span></div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align:center;padding:16px 0 8px;">
+                <div style="font-size:14px;color:#00ddb4;font-weight:700;">🐝 FUTURE-eco-system</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">Building the future, one tap at a time 💎</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Boost Active Indicator -->
+    <div class="boost-active" id="boost-indicator" style="display:none;"></div>
+
+    <!-- Footer Navigation -->
+    <div class="footer-nav">
+        <button class="footer-btn active" id="footer-invite">📤 Invite</button>
+        <button class="footer-btn" id="footer-profile">👤 Profile</button>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            en: {
+                balance: "Balance",
+                taps: "Total Taps",
+                friends: "Friends",
+                invite: "Invite Friends",
+                levels: ["Crystal Larva", "Crystal Pupa", "Crystal Bee", "Crystal Queen", "Crystal Hive", "Crystal God"],
+                tap: "TAP",
+                leaderboard: "LEADERBOARD",
+                tasks: "TASKS",
+                shop: "SHOP",
+                taskTap: "Tap 500 times today",
+                taskInvite: "Invite 1 friend",
+                taskStreak: "Open app 3 days in a row",
+                doubleCoins: "Double Coins",
+                doubleCoinsDesc: "2x coins for 1 hour",
+                fastEnergy: "Fast Energy",
+                fastEnergyDesc: "3x energy regen for 1 hour",
+                claim: "Claim",
+                buy: "Buy",
+                boostActive: "Boost active!",
+                wallet: "WALLET",
+                connectWallet: "Connect Wallet",
+                connected: "Connected",
+                disconnect: "Disconnect",
+                comingSoon: "Coming Soon",
+                withdrawTokens: "Withdraw FUTURE tokens to wallet — coming soon",
+                airdrop: "Future airdrop will be sent to your wallet"
+            },
+            ru: {
+                balance: "Баланс",
+                taps: "Всего тапов",
+                friends: "Друзья",
+                invite: "Пригласить друзей",
+                levels: ["Кристальная личинка", "Кристальная куколка", "Кристальная пчела", "Кристальная королева", "Кристальный улей", "Кристальный бог"],
+                tap: "ТАПАЙ",
+                leaderboard: "РЕЙТИНГ",
+                tasks: "ЗАДАЧИ",
+                shop: "МАГАЗИН",
+                taskTap: "Тапни 500 раз сегодня",
+                taskInvite: "Пригласи 1 друга",
+                taskStreak: "Открывай приложение 3 дня подряд",
+                doubleCoins: "Двойные монеты",
+                doubleCoinsDesc: "2x монеты на 1 час",
+                fastEnergy: "Быстрая энергия",
+                fastEnergyDesc: "3x восстановление энергии на 1 час",
+                claim: "Получить",
+                buy: "Купить",
+                boostActive: "Бонус активен!",
+                wallet: "КОШЕЛЕК",
+                connectWallet: "Подключить кошелек",
+                connected: "Подключено",
+                disconnect: "Отключить",
+                comingSoon: "Скоро",
+                withdrawTokens: "Вывести FUTURE токены в кошелек — скоро",
+                airdrop: "Будущий эирдроп будет отправлен на ваш кошелек"
+            },
+            pt: {
+                balance: "Saldo",
+                taps: "Total de toques",
+                friends: "Amigos",
+                invite: "Convidar Amigos",
+                levels: ["Larva de Cristal", "Pupa de Cristal", "Abelha de Cristal", "Rainha de Cristal", "Colmeia de Cristal", "Deus de Cristal"],
+                tap: "TOCAR",
+                leaderboard: "RANKING",
+                tasks: "TAREFAS",
+                shop: "LOJA",
+                taskTap: "Toque 500 vezes hoje",
+                taskInvite: "Convide 1 amigo",
+                taskStreak: "Abra o app 3 dias seguidos",
+                doubleCoins: "Moedas Duplas",
+                doubleCoinsDesc: "2x moedas por 1 hora",
+                fastEnergy: "Energia Rápida",
+                fastEnergyDesc: "3x regeneração de energia por 1 hora",
+                claim: "Reclamar",
+                buy: "Comprar",
+                boostActive: "Bônus ativo!",
+                wallet: "CARTEIRA",
+                connectWallet: "Conectar Carteira",
+                connected: "Conectado",
+                disconnect: "Desconectar",
+                comingSoon: "Em Breve",
+                withdrawTokens: "Sacar tokens FUTURE para carteira — em breve",
+                airdrop: "O airdrop futuro será enviado para sua carteira"
+            },
+            lt: {
+                balance: "Balansas",
+                taps: "Iš viso paspaudimų",
+                friends: "Draugai",
+                invite: "Pakviesti draugus",
+                levels: ["Kristalinė lerva", "Kristalinė lėliukė", "Kristalinė bitė", "Kristalinė karalienė", "Kristalinis avilys", "Kristalinis dievas"],
+                tap: "PASPAUDIMAS",
+                leaderboard: "REITINGAS",
+                tasks: "UŽDUOTYS",
+                shop: "PARDUOTUVĖ",
+                taskTap: "Paspaudyk 500 kartų šiandien",
+                taskInvite: "Pakviesti 1 draugą",
+                taskStreak: "Atidaryk programą 3 dienas iš eilės",
+                doubleCoins: "Dvigubos monetos",
+                doubleCoinsDesc: "2x monetos 1 valandą",
+                fastEnergy: "Greita energija",
+                fastEnergyDesc: "3x energijos regeneracija 1 valandą",
+                claim: "Gauti",
+                buy: "Pirkti",
+                boostActive: "Bėnas aktyvus!",
+                wallet: "PINIGINĖ",
+                connectWallet: "Prijungti piniginę",
+                connected: "Prijungta",
+                disconnect: "Atjungti",
+                comingSoon: "Jau greitai",
+                withdrawTokens: "Išimti FUTURE žetonus į piniginę — jau greitai",
+                airdrop: "Būsimas airdrop bus išsiųstas į jūsų piniginę"
+            }
+        };
+
+        const levelThresholds = [0, 100, 500, 2000, 10000, 50000];
+        
+        // State
+        let state = {
+            userId: null,
+            username: "Guest",
+            balance: 0,
+            totalTaps: 0,
+            friends: 0,
+            energy: 500,
+            maxEnergy: 500,
+            lang: 'en',
+            referralCode: null,
+            boosts: {},
+            tasks: {
+                tap: { completed: 0, target: 500 },
+                invite: { completed: 0, target: 1 },
+                streak: { completed: 0, target: 3 }
+            },
+            lastTaskReset: Date.now(),
+            lastAppOpen: Date.now(),
+            connectedWallet: null,
+            walletAddress: null,
+            walletAddressShort: null,
+            walletBalance: null,
+            walletType: null,
+            walletAddress: null,
+            paymentHistory: [],
+            username: 'Player_' + Math.random().toString(36).substring(7),
+            referralCount: 0,
+            referredBy: null,
+            invitedFriends: [],
+            referralInputShown: false,
+            activeBoosters: {},
+            cosmetic: null,
+            vipMember: false
+        };
+
+        // Load state
+        const saved = localStorage.getItem('future_eco_state');
+        if (saved) {
+            state = {...state, ...JSON.parse(saved)};
+        }
+
+        // Initialize Telegram WebApp
+        let tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            if (tg.initDataUnsafe?.user) {
+                const user = tg.initDataUnsafe.user;
+                state.userId = user.id;
+                state.username = user.username || `User${user.id}`;
+                state.referralCode = `FUTURE${user.id}`;
+            }
+        }
+
+        // DOM Elements
+        const elBalance = document.getElementById('balance');
+        const elTotalTaps = document.getElementById('total-taps');
+        const elFriendsCount = document.getElementById('friends-count');
+        const elEnergyBar = document.getElementById('energy-bar');
+        const elEnergyVal = document.getElementById('energy-val');
+        const elXpBar = document.getElementById('xp-bar');
+        const elLevelName = document.getElementById('level-name');
+        const elLevelRatio = document.getElementById('level-ratio');
+        const elLangSwitcher = document.getElementById('lang-switcher');
+        const elMascotBtn = document.getElementById('mascot-btn');
+        const elUsernameDisplay = document.getElementById('username-display');
+        const elLoginBtn = document.getElementById('login-btn');
+        const elBoostIndicator = document.getElementById('boost-indicator');
+
+        // Navigation
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const screens = document.querySelectorAll('.screen');
+
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const screenId = tab.dataset.screen;
+                showScreen(screenId);
+            });
+        });
+
+        function showScreen(screenId) {
+            screens.forEach(s => s.classList.remove('active'));
+            navTabs.forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(`screen-${screenId}`).classList.add('active');
+            document.querySelector(`[data-screen="${screenId}"]`).classList.add('active');
+
+            // Scroll back to top when switching screens
+            window.scrollTo(0, 0);
+            
+            if (screenId === 'leaderboard') {
+                updateLeaderboard();
+            } else if (screenId === 'tasks') {
+                updateTasksUI();
+            } else if (screenId === 'shop') {
+                updateShopUI();
+            } else if (screenId === 'wallet') {
+                updateWalletUI();
+            }
+        }
+
+        function updateUI() {
+            elBalance.innerText = Math.floor(state.balance);
+            elTotalTaps.innerText = state.totalTaps;
+            elFriendsCount.innerText = state.friends;
+            elUsernameDisplay.innerText = state.username;
+            
+            // Energy
+            const energyPercent = (state.energy / state.maxEnergy) * 100;
+            elEnergyBar.style.width = energyPercent + '%';
+            elEnergyVal.innerText = Math.floor(state.energy);
+
+            // Level & XP
+            let levelIndex = 0;
+            for (let i = levelThresholds.length - 1; i >= 0; i--) {
+                if (state.balance >= levelThresholds[i]) {
+                    levelIndex = i;
+                    break;
+                }
+            }
+
+            const currentLevelName = translations[state.lang].levels[levelIndex];
+            elLevelName.innerText = currentLevelName;
+
+            if (levelIndex < levelThresholds.length - 1) {
+                const nextThreshold = levelThresholds[levelIndex + 1];
+                const currentThreshold = levelThresholds[levelIndex];
+                const progress = ((state.balance - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
+                elXpBar.style.width = Math.min(progress, 100) + '%';
+                elLevelRatio.innerText = `${Math.floor(state.balance)} / ${nextThreshold}`;
+            } else {
+                elXpBar.style.width = '100%';
+                elLevelRatio.innerText = 'MAX';
+            }
+
+            // Boost indicator
+            if (state.boosts.doubleCoins && state.boosts.doubleCoins > Date.now()) {
+                elBoostIndicator.innerText = `💎 ${translations[state.lang].boostActive}`;
+                elBoostIndicator.style.display = 'block';
+            } else {
+                elBoostIndicator.style.display = 'none';
+            }
+
+            elLangSwitcher.value = state.lang;
+            updateHeaderWithWallet();
+        }
+
+        function saveState() {
+            localStorage.setItem('future_eco_state', JSON.stringify(state));
+        }
+
+        function getEarnPerTap() {
+            let levelIndex = 0;
+            for (let i = levelThresholds.length - 1; i >= 0; i--) {
+                if (state.balance >= levelThresholds[i]) {
+                    levelIndex = i;
+                    break;
+                }
+            }
+            let earn = 1 + levelIndex;
+            if (state.boosts.doubleCoins && state.boosts.doubleCoins > Date.now()) {
+                earn *= 2;
+            }
+            return earn;
+        }
+
+        function handleTap(e) {
+            if (state.energy >= 1) {
+                const earn = getEarnPerTap();
+                state.balance += earn;
+                state.totalTaps += 1;
+                state.energy -= 1;
+                state.tasks.tap.completed += 1;
+                
+                const rect = elMascotBtn.getBoundingClientRect();
+                const x = e.clientX || (rect.left + rect.width / 2);
+                const y = e.clientY || (rect.top + rect.height / 2);
+                
+                showFloatingText(x, y, `+${earn}`);
+                
+                updateUI();
+                saveState();
+            }
+        }
+
+        function showFloatingText(x, y, text) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            el.style.left = (x - 20) + 'px';
+            el.style.top = (y - 40) + 'px';
+            document.body.appendChild(el);
+            
+            setTimeout(() => {
+                el.remove();
+            }, 800);
+        }
+
+        // Listeners
+        elMascotBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleTap(e.touches[0]);
+        });
+
+        elMascotBtn.addEventListener('mousedown', (e) => {
+            handleTap(e);
+        });
+
+        elLangSwitcher.addEventListener('change', (e) => {
+            state.lang = e.target.value;
+            updateUI();
+            saveState();
+        });
+
+        // Energy Regeneration
+        setInterval(() => {
+            if (state.energy < state.maxEnergy) {
+                let regenRate = 1;
+                if (state.boosts.fastEnergy && state.boosts.fastEnergy > Date.now()) {
+                    regenRate = 3;
+                }
+                state.energy = Math.min(state.maxEnergy, state.energy + regenRate);
+                updateUI();
+            }
+        }, 3000);
+
+        // Leaderboard
+        function updateLeaderboard() {
+            const mockLeaderboard = [
+                { rank: 1, username: "CryptoKing", balance: 500000, level: 5 },
+                { rank: 2, username: "BeeKeeper", balance: 450000, level: 5 },
+                { rank: 3, username: "TapMaster", balance: 400000, level: 5 },
+                { rank: 4, username: state.username, balance: state.balance, level: 4, isCurrentUser: true },
+                { rank: 5, username: "FutureHunter", balance: 350000, level: 4 },
+                { rank: 6, username: "EcoWarrior", balance: 300000, level: 4 },
+                { rank: 7, username: "CrystalDreamer", balance: 250000, level: 3 },
+                { rank: 8, username: "TokenCollector", balance: 200000, level: 3 }
+            ];
+
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+
+            mockLeaderboard.forEach(user => {
+                const medal = user.rank === 1 ? '🥇' : user.rank === 2 ? '🥈' : user.rank === 3 ? '🥉' : user.rank;
+                const item = document.createElement('div');
+                item.className = `leaderboard-item ${user.isCurrentUser ? 'current-user' : ''}`;
+                item.innerHTML = `
+                    <div class="rank ${user.rank <= 3 ? 'medal' : ''}">${medal}</div>
+                    <div class="user-details">
+                        <div class="user-name">${user.username}</div>
+                        <div class="user-level">${translations[state.lang].levels[user.level]}</div>
+                    </div>
+                    <div class="user-balance">${user.balance.toLocaleString()} FUTURE</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Tasks
+        function updateTasksUI() {
+            const tasks = [
+                { id: 'tap', title: translations[state.lang].taskTap, reward: 200, progress: state.tasks.tap.completed, target: state.tasks.tap.target },
+                { id: 'invite', title: translations[state.lang].taskInvite, reward: 500, progress: state.tasks.invite.completed, target: state.tasks.invite.target },
+                { id: 'streak', title: translations[state.lang].taskStreak, reward: 1000, progress: state.tasks.streak.completed, target: state.tasks.streak.target }
+            ];
+
+            const list = document.getElementById('tasks-list');
+            list.innerHTML = '';
+
+            tasks.forEach(task => {
+                const completed = task.progress >= task.target;
+                const item = document.createElement('div');
+                item.className = 'task-item';
+                const progressPercent = Math.min((task.progress / task.target) * 100, 100);
+                
+                item.innerHTML = `
+                    <div class="task-info">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-reward">+${task.reward} FUTURE</div>
+                        <div class="task-progress">
+                            <div class="task-progress-bar" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <div style="font-size: 11px; color: #aaa; margin-top: 5px;">${task.progress}/${task.target}</div>
+                    </div>
+                    <button class="task-claim-btn" ${!completed ? 'disabled' : ''} onclick="claimTask('${task.id}', ${task.reward})">
+                        ${completed ? translations[state.lang].claim : '🔒'}
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function claimTask(taskId, reward) {
+            state.balance += reward;
+            state.tasks[taskId].completed = 0;
+            updateUI();
+            updateTasksUI();
+            saveState();
+        }
+
+        // Shop
+
+        function buyBoost(boostId, price, duration) {
+            if (state.balance >= price) {
+                state.balance -= price;
+                if (boostId === 'double') {
+                    state.boosts.doubleCoins = Date.now() + duration;
+                } else if (boostId === 'energy') {
+                    state.boosts.fastEnergy = Date.now() + duration;
+                }
+                updateUI();
+                updateShopUI();
+                saveState();
+            }
+        }
+
+        // Footer buttons
+        document.getElementById('footer-invite').addEventListener('click', () => {
+            const refCode = state.referralCode || state.userId || 'FUTURE';
+            const shareText = encodeURIComponent('🐝 Join FUTURE-eco-system! Tap to earn FUTURE tokens! Use my code: ' + refCode + ' and get 500 FREE tokens! 💎');
+            const shareUrl = encodeURIComponent('https://t.me/FutureEcoSystemBot');
+            
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink('https://t.me/share/url?url=' + shareUrl + '&text=' + shareText);
+            } else {
+                // Fallback for browser
+                window.open('https://t.me/share/url?url=' + shareUrl + '&text=' + shareText, '_blank');
+            }
+        });
+
+
+        // Real Wallet Integration
+        let tonConnector = null;
+        let walletConnectClient = null;
+
+        // Wallet data
+        const wallets = [
+            { id: 'tonkeeper', name: 'Tonkeeper', icon: '💎', color: '#0098EA' },
+            { id: 'tgwallet', name: 'TG Wallet', icon: '📱', color: '#0088CC' }
+        ];
+
+        function updateWalletUI() {
+            const walletList = document.getElementById('wallet-list');
+            const walletStatus = document.getElementById('wallet-status');
+            
+            walletList.innerHTML = '';
+            
+            if (state.connectedWallet) {
+                walletStatus.innerHTML = `
+                    <div class="wallet-status-connected">
+                        <div class="wallet-status-dot"></div>
+                        <div class="wallet-status-text">${translations[state.lang].connected}: ${state.connectedWallet}</div>
+                    </div>
+                `;
+            } else {
+                walletStatus.innerHTML = `<div class="wallet-status-text">${translations[state.lang].connectWallet}</div>`;
+            }
+            
+            wallets.forEach(wallet => {
+                const isConnected = state.connectedWallet === wallet.name;
+                const card = document.createElement('div');
+                card.className = `wallet-card ${isConnected ? 'connected' : ''}`;
+                card.innerHTML = `
+                    <div class="wallet-info">
+                        <div class="wallet-icon">${wallet.icon}</div>
+                        <div class="wallet-details">
+                            <div class="wallet-name">${wallet.name}</div>
+                            <div class="wallet-benefits">
+                                ${translations[state.lang].withdrawTokens}<br>
+                                ${translations[state.lang].airdrop}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wallet-action">
+                        ${isConnected ? 
+                            `<button class="disconnect-btn" onclick="disconnectWallet()">${translations[state.lang].disconnect}</button>` :
+                            `<button class="connect-btn" onclick="connectWallet('${wallet.name}')">${translations[state.lang].connectWallet}</button>`
+                        }
+                    </div>
+                `;
+                walletList.appendChild(card);
+            });
+        }
+
+        async function connectWallet(walletName) {
+            try {
+                if (!window._tonConnectUI) {
+                    alert('TonConnect loading... try again in 2 seconds');
+                    return;
+                }
+                await window._tonConnectUI.openModal();
+            } catch(e) {
+                alert('❌ Could not open wallet: ' + e.message);
+            }
+        }
+
+        function disconnectWallet() {
+            if (window._tonConnectUI) window._tonConnectUI.disconnect();
+            state.connectedWallet = null;
+            state.walletAddress = null;
+            state.walletBalance = null;
+            saveState();
+            updateWalletUI();
+        }
+
+        function showConnectionPopup(walletName) {
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.id = 'popup-overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'connection-popup';
+            popup.id = 'connection-popup';
+            popup.innerHTML = `
+                <div class="spinner"></div>
+                <div class="popup-title">Opening ${walletName}...</div>
+                <div class="popup-message">${translations[state.lang].comingSoon}</div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        }
+
+        function showSuccessPopup(walletName) {
+            const popup = document.getElementById('connection-popup');
+            const overlay = document.getElementById('popup-overlay');
+            
+            if (popup) {
+                popup.innerHTML = `
+                    <div class="success-icon">✅</div>
+                    <div class="popup-title">${translations[state.lang].connected}!</div>
+                    <div class="popup-message">${walletName} ${translations[state.lang].connected.toLowerCase()} successfully</div>
+                `;
+                
+                setTimeout(() => {
+                    popup.remove();
+                    overlay.remove();
+                }, 2000);
+            }
+        }
+
+        // Update header with wallet status
+        function updateHeaderWithWallet() {
+            const headerLeft = document.querySelector('.header-left');
+            let walletIndicator = headerLeft.querySelector('.wallet-indicator');
+            
+            if (state.connectedWallet) {
+                if (!walletIndicator) {
+                    walletIndicator = document.createElement('div');
+                    walletIndicator.className = 'wallet-indicator';
+                    walletIndicator.style.cssText = 'display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(0, 221, 180, 0.1); border-radius: 5px; font-size: 12px;';
+                    headerLeft.appendChild(walletIndicator);
+                }
+                walletIndicator.innerHTML = `<span style="color: #00ff00;">●</span> ${state.connectedWallet}`;
+            } else if (walletIndicator) {
+                walletIndicator.remove();
+            }
+        }
+
+
+        // Connect TON Wallet (Tonkeeper, TG Wallet, TON Space)
+        async function connectTonWallet(walletName) {
+            showConnectionPopup(walletName);
+            
+            try {
+                // Generate mock TON address for demo
+                const mockAddress = 'UQA' + Math.random().toString(36).substring(2, 15) + 'x3f';
+                const shortAddress = mockAddress.substring(0, 6) + '...' + mockAddress.substring(mockAddress.length - 4);
+                const mockBalance = (Math.random() * 100).toFixed(2);
+                
+                // Save connection
+                state.connectedWallet = walletName;
+                state.walletAddress = mockAddress;
+                state.walletAddressShort = shortAddress;
+                state.walletBalance = mockBalance;
+                state.walletType = 'TON';
+                
+                saveState();
+                updateWalletUI();
+                showSuccessPopup(walletName, shortAddress, mockBalance);
+                updateHeaderWithWallet();
+                
+            } catch (error) {
+                console.error('TON wallet connection error:', error);
+                showErrorPopup(walletName, error.message);
+            }
+        }
+
+        // Connect EVM Wallet (MetaMask, Trust, OKX, Coinbase)
+        async function connectEvmWallet(walletName) {
+            showConnectionPopup(walletName);
+            
+            try {
+                let provider = null;
+                
+                // Detect wallet provider
+                if (walletName === 'MetaMask' && typeof window.ethereum !== 'undefined') {
+                    provider = window.ethereum;
+                } else if (walletName === 'Trust Wallet' && typeof window.trustwallet !== 'undefined') {
+                    provider = window.trustwallet;
+                } else if (walletName === 'OKX Wallet' && typeof window.okxwallet !== 'undefined') {
+                    provider = window.okxwallet;
+                } else if (walletName === 'Coinbase Wallet' && typeof window.coinbaseWalletProvider !== 'undefined') {
+                    provider = window.coinbaseWalletProvider;
+                }
+
+                if (provider) {
+                    // Request account access
+                    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    const shortAddress = address.substring(0, 6) + '...' + address.substring(address.length - 4);
+                    
+                    // Get balance
+                    const balanceWei = await provider.request({
+                        method: 'eth_getBalance',
+                        params: [address, 'latest']
+                    });
+                    
+                    // Convert Wei to ETH
+                    const balanceEth = (parseInt(balanceWei, 16) / 1e18).toFixed(4);
+                    
+                    // Save connection
+                    state.connectedWallet = walletName;
+                    state.walletAddress = address;
+                    state.walletAddressShort = shortAddress;
+                    state.walletBalance = balanceEth;
+                    state.walletType = 'EVM';
+                    
+                    saveState();
+                    updateWalletUI();
+                    showSuccessPopup(walletName, shortAddress, balanceEth);
+                    updateHeaderWithWallet();
+                } else {
+                    // Wallet not installed - show mock connection
+                    const mockAddress = '0x' + Math.random().toString(16).substring(2, 42);
+                    const shortAddress = mockAddress.substring(0, 6) + '...' + mockAddress.substring(mockAddress.length - 4);
+                    const mockBalance = (Math.random() * 10).toFixed(4);
+                    
+                    state.connectedWallet = walletName;
+                    state.walletAddress = mockAddress;
+                    state.walletAddressShort = shortAddress;
+                    state.walletBalance = mockBalance;
+                    state.walletType = 'EVM';
+                    
+                    saveState();
+                    updateWalletUI();
+                    showSuccessPopup(walletName, shortAddress, mockBalance);
+                    updateHeaderWithWallet();
+                }
+                
+            } catch (error) {
+                console.error('EVM wallet connection error:', error);
+                showErrorPopup(walletName, error.message);
+            }
+        }
+
+        // Updated connectWallet function
+        function connectWallet(walletName) {
+            const tonWallets = ['Tonkeeper', 'TG Wallet', 'TON Space'];
+            const evmWallets = ['MetaMask', 'Trust Wallet', 'OKX Wallet', 'Coinbase Wallet'];
+            
+            if (tonWallets.includes(walletName)) {
+                connectTonWallet(walletName);
+            } else if (evmWallets.includes(walletName)) {
+                connectEvmWallet(walletName);
+            } else {
+                connectEvmWallet(walletName);
+            }
+        }
+
+        // Show error popup
+        function showErrorPopup(walletName, errorMsg) {
+            const popup = document.getElementById('connection-popup');
+            const overlay = document.getElementById('popup-overlay');
+            
+            if (popup) {
+                popup.innerHTML = `
+                    <div style="font-size: 30px; margin-bottom: 10px;">⚠️</div>
+                    <div class="popup-title">Connection Failed</div>
+                    <div class="popup-message">${walletName} not installed or connection failed</div>
+                `;
+                
+                setTimeout(() => {
+                    popup.remove();
+                    overlay.remove();
+                }, 3000);
+            }
+        }
+
+        // Updated showSuccessPopup with address and balance
+        function showSuccessPopup(walletName, address, balance) {
+            const popup = document.getElementById('connection-popup');
+            const overlay = document.getElementById('popup-overlay');
+            
+            if (popup) {
+                const balanceSymbol = state.walletType === 'TON' ? 'TON' : 'ETH';
+                popup.innerHTML = `
+                    <div class="success-icon">✅</div>
+                    <div class="popup-title">${translations[state.lang].connected}!</div>
+                    <div class="popup-message">
+                        <div style="font-size: 12px; margin: 10px 0; color: #00ddb4; font-family: monospace;">${address}</div>
+                        <div style="font-size: 11px; color: #aaa;">Balance: ${balance} ${balanceSymbol}</div>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    popup.remove();
+                    overlay.remove();
+                }, 3000);
+            }
+        }
+
+        // Updated updateWalletUI to show real address and balance
+        function updateWalletUI() {
+            const walletList = document.getElementById('wallet-list');
+            const walletStatus = document.getElementById('wallet-status');
+            
+            walletList.innerHTML = '';
+            
+            if (state.connectedWallet) {
+                const balanceSymbol = state.walletType === 'TON' ? 'TON' : 'ETH';
+                walletStatus.innerHTML = `
+                    <div class="wallet-status-connected">
+                        <div class="wallet-status-dot"></div>
+                        <div class="wallet-status-text">
+                            <div>${state.connectedWallet}</div>
+                            <div style="font-size: 11px; color: #aaa; font-family: monospace; margin-top: 5px;">
+                                ${state.walletAddressShort}
+                            </div>
+                            <div style="font-size: 11px; color: #aaa; margin-top: 3px;">
+                                Balance: ${state.walletBalance} ${balanceSymbol}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                walletStatus.innerHTML = `<div class="wallet-status-text">${translations[state.lang].connectWallet}</div>`;
+            }
+            
+            wallets.forEach(wallet => {
+                const isConnected = state.connectedWallet === wallet.name;
+                const card = document.createElement('div');
+                card.className = `wallet-card ${isConnected ? 'connected' : ''}`;
+                card.innerHTML = `
+                    <div class="wallet-info">
+                        <div class="wallet-icon">${wallet.icon}</div>
+                        <div class="wallet-details">
+                            <div class="wallet-name">${wallet.name}</div>
+                            <div class="wallet-benefits">
+                                ${translations[state.lang].withdrawTokens}<br>
+                                ${translations[state.lang].airdrop}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wallet-action">
+                        ${isConnected ? 
+                            `<button class="disconnect-btn" onclick="disconnectWallet()">${translations[state.lang].disconnect}</button>` :
+                            `<button class="connect-btn" onclick="connectWallet('${wallet.name}')">${translations[state.lang].connectWallet}</button>`
+                        }
+                    </div>
+                `;
+                walletList.appendChild(card);
+            });
+        }
+
+        // Updated disconnectWallet
+        function disconnectWallet() {
+            state.connectedWallet = null;
+            state.walletAddress = null;
+            state.walletAddressShort = null;
+            state.walletBalance = null;
+            state.walletType = null;
+            saveState();
+            updateWalletUI();
+            updateHeaderWithWallet();
+        }
+
+        // Updated updateHeaderWithWallet to show address and balance
+        function updateHeaderWithWallet() {
+            const headerLeft = document.querySelector('.header-left');
+            let walletIndicator = headerLeft.querySelector('.wallet-indicator');
+            
+            if (state.connectedWallet) {
+                if (!walletIndicator) {
+                    walletIndicator = document.createElement('div');
+                    walletIndicator.className = 'wallet-indicator';
+                    walletIndicator.style.cssText = 'display: flex; flex-direction: column; gap: 3px; padding: 5px 10px; background: rgba(0, 221, 180, 0.1); border-radius: 5px; font-size: 11px; border: 1px solid rgba(0, 221, 180, 0.3);';
+                    headerLeft.appendChild(walletIndicator);
+                }
+                walletIndicator.innerHTML = `
+                    <div style="color: #00ddb4; display: flex; align-items: center; gap: 5px;">
+                        <span>●</span> ${state.connectedWallet}
+                    </div>
+                    <div style="color: #aaa; font-family: monospace; font-size: 10px;">
+                        ${state.walletAddressShort || ''}
+                    </div>
+                `;
+            } else if (walletIndicator) {
+                walletIndicator.remove();
+            }
+        }
+
+        // Initialize wallets on load
+        window.addEventListener('load', () => {
+            console.log('Wallet systems ready');
+        });
+
+
+        // Shop Data
+        const shopItems = {
+            boosts: [
+                { id: 'energy2x', name: 'energyX2', desc: 'energyX2Desc', price: 1, duration: 3600, icon: '⚡' },
+                { id: 'coins3x', name: 'coinsX3', desc: 'coinsX3Desc', price: 2, duration: 3600, icon: '💰' },
+                { id: 'infiniteEnergy', name: 'infiniteEnergy', desc: 'infiniteEnergyDesc', price: 0.5, duration: 1800, icon: '♾️' },
+                { id: 'megaTap', name: 'megaTap', desc: 'megaTapDesc', price: 3, duration: 900, icon: '🔥' }
+            ],
+            cosmetics: [
+                { id: 'goldenBee', name: 'goldenBee', desc: 'goldenBeeDesc', price: 3, icon: '✨', class: 'bee-golden' },
+                { id: 'rainbowBee', name: 'rainbowBee', desc: 'rainbowBeeDesc', price: 2, icon: '🌈', class: 'bee-rainbow' },
+                { id: 'galaxyBee', name: 'galaxyBee', desc: 'galaxyBeeDesc', price: 5, icon: '🌌', class: 'bee-galaxy' },
+                { id: 'diamondWings', name: 'diamondWings', desc: 'diamondWingsDesc', price: 2, icon: '💎' }
+            ],
+            vip: [
+                { id: 'crystalVip', name: 'crystalVip', desc: 'crystalVipDesc', price: 10, duration: 'monthly', icon: '👑' }
+            ]
+        };
+
+
+        // Wallet Connection Functions
+        async function connectWalletTON(walletType) {
+            try {
+                initTonConnect();
+                showProcessingPopup('wallet');
+                
+                // Open TON Connect UI
+                const account = await tonConnectUI.connectWallet();
+                
+                if (account) {
+                    connectedWalletAddress = account.address;
+                    walletConnected = true;
+                    state.walletType = walletType;
+                    state.walletAddress = connectedWalletAddress;
+                    
+                    updateWalletDisplay();
+                    saveState();
+                    
+                    // Close processing popup
+                    document.getElementById('processing-overlay')?.remove();
+                    document.getElementById('processing-popup')?.remove();
+                    
+                    showAlert("Wallet connected successfully!");
+                }
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                document.getElementById('processing-overlay')?.remove();
+                document.getElementById('processing-popup')?.remove();
+                showAlert("Failed to connect wallet");
+            }
+        }
+
+        async function connectWalletEVM(walletType) {
+            try {
+                initWalletConnect();
+                showProcessingPopup('wallet');
+                
+                if (window.walletConnectModal) {
+                    const session = await window.walletConnectModal.openModal();
+                    
+                    if (session) {
+                        connectedWalletAddress = session.accounts[0];
+                        walletConnected = true;
+                        state.walletType = walletType;
+                        state.walletAddress = connectedWalletAddress;
+                        
+                        updateWalletDisplay();
+                        saveState();
+                        
+                        document.getElementById('processing-overlay')?.remove();
+                        document.getElementById('processing-popup')?.remove();
+                        
+                        showAlert("Wallet connected successfully!");
+                    }
+                }
+            } catch (error) {
+                console.error('EVM wallet connection error:', error);
+                document.getElementById('processing-overlay')?.remove();
+                document.getElementById('processing-popup')?.remove();
+                showAlert("Failed to connect wallet");
+            }
+        }
+
+        function updateWalletDisplay() {
+            const statusDiv = document.getElementById('wallet-status');
+            const connectedDiv = document.getElementById('wallet-connected-info');
+            const addressDiv = document.getElementById('connected-wallet-address');
+            
+            if (walletConnected && connectedWalletAddress) {
+                // Hide status, show connected info
+                statusDiv.style.display = 'none';
+                connectedDiv.style.display = 'block';
+                
+                // Format address (first 6 + last 4 chars)
+                const addr = connectedWalletAddress;
+                const formatted = addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+                addressDiv.textContent = formatted;
+                
+                // Update header
+                updateHeaderWallet();
+            }
+        }
+
+        function updateHeaderWallet() {
+            const headerLeft = document.querySelector('.header-left');
+            let walletBadge = headerLeft.querySelector('.wallet-badge');
+            
+            if (walletConnected && connectedWalletAddress) {
+                if (!walletBadge) {
+                    walletBadge = document.createElement('span');
+                    walletBadge.className = 'wallet-badge';
+                    headerLeft.appendChild(walletBadge);
+                }
+                const addr = connectedWalletAddress;
+                const formatted = addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+                walletBadge.textContent = '💳 ' + formatted;
+            } else if (walletBadge) {
+                walletBadge.remove();
+            }
+        }
+
+        function disconnectWallet() {
+            walletConnected = false;
+            connectedWalletAddress = null;
+            state.walletType = null;
+            state.walletAddress = null;
+            
+            // Reset UI
+            document.getElementById('wallet-status').style.display = 'block';
+            document.getElementById('wallet-connected-info').style.display = 'none';
+            
+            updateHeaderWallet();
+            saveState();
+            showAlert("Wallet disconnected");
+        }
+
+        // Load wallet on startup
+        window.addEventListener('load', () => {
+            if (state.walletAddress) {
+                connectedWalletAddress = state.walletAddress;
+                walletConnected = true;
+                updateWalletDisplay();
+            }
+        });
+
+
+        // Referral System Functions
+        function getReferralLink() {
+            if (!referralCode) {
+                generateUserId();
+            }
+            const baseUrl = window.location.origin + window.location.pathname;
+            return baseUrl + '?ref=' + referralCode;
+        }
+        
+        async function shareReferralLink() {
+            const link = getReferralLink();
+            const message = `Join FUTURE-eco-system and earn 500 FUTURE tokens! 🚀 ${link}`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'FUTURE-eco-system',
+                        text: message,
+                        url: link
+                    });
+                } catch (err) {
+                    console.log('Share cancelled');
+                }
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(link);
+                showAlert('Referral link copied to clipboard!');
+            }
+        }
+        
+        function copyReferralLink() {
+            const link = getReferralLink();
+            navigator.clipboard.writeText(link);
+            showAlert('Link copied: ' + link);
+        }
+        
+        // Update leaderboard UI
+
+        // Get current user rank
+        async function getCurrentUserRank() {
+            if (!supabaseClient || !userId) return null;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('balance')
+                    .order('balance', { ascending: false });
+                
+                if (error) return null;
+                
+                const rank = data.findIndex(u => u.user_id === userId) + 1;
+                return rank > 0 ? rank : null;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        async function updateLeaderboard() {
+            const leaderboardList = document.getElementById('leaderboard-list');
+            if (!leaderboardList) return;
+            
+            leaderboardList.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">Loading...</div>';
+            
+            const players = await fetchLeaderboard();
+            leaderboardList.innerHTML = '';
+            
+            if (players.length === 0) {
+                leaderboardList.innerHTML = `
+                    <div style="text-align:center;padding:30px 20px;">
+                        <div style="font-size:48px;margin-bottom:12px;">🐝</div>
+                        <div style="font-size:16px;color:#00ddb4;font-weight:700;margin-bottom:8px;">Be the first!</div>
+                        <div style="font-size:13px;color:rgba(255,255,255,0.5);">Leaderboard fills up as players join. Invite friends to compete!</div>
+                        <div style="margin-top:20px;padding:14px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:12px;">
+                            <div style="font-size:12px;color:rgba(255,255,255,0.5);">Your position</div>
+                            <div style="font-size:20px;color:#fff;font-weight:700;">${state.username || 'You'}</div>
+                            <div style="font-size:16px;color:#00ddb4;">${(state.balance||0).toLocaleString()} FUTURE</div>
+                        </div>
+                    </div>`;
+                return;
+            }
+            
+            players.forEach((player, index) => {
+                const isCurrentUser = player.user_id === userId;
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+                
+                const playerCard = document.createElement('div');
+                playerCard.className = `leaderboard-item ${isCurrentUser ? 'current-user' : ''}`;
+                playerCard.innerHTML = `
+                    <div class="leaderboard-rank">${medal}</div>
+                    <div class="leaderboard-info">
+                        <div class="leaderboard-name">${player.username || 'Player'}</div>
+                        <div class="leaderboard-balance">${(player.balance || 0).toLocaleString()} FUTURE</div>
+                    </div>
+                    <div class="leaderboard-level">Lvl ${player.level || 1}</div>
+                `;
+                leaderboardList.appendChild(playerCard);
+            });
+        }
+        
+        // Update invited friends list
+        async function updateInvitedFriends() {
+            const friendsList = document.getElementById('friends-list');
+            if (!friendsList) return;
+            
+            const friends = await getInvitedFriends();
+            state.invitedFriends = friends;
+            state.referralCount = friends.length;
+            saveState();
+            
+            friendsList.innerHTML = '';
+            
+            if (friends.length === 0) {
+                friendsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #aaa;">No friends invited yet</div>';
+                return;
+            }
+            
+            friends.forEach((friend, index) => {
+                const friendCard = document.createElement('div');
+                friendCard.className = 'friend-item';
+                friendCard.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <div style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--teal-accent), var(--purple-accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">${index + 1}</div>
+                        <div>
+                            <div style="font-weight: bold; color: var(--text-color);">${friend.username || 'Friend'}</div>
+                            <div style="font-size: 11px; color: #aaa;">${(friend.balance || 0).toLocaleString()} FUTURE</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: var(--teal-accent); font-weight: bold;">+500 💰</div>
+                `;
+                friendsList.appendChild(friendCard);
+            });
+        }
+        
+        // Initialize referral system on load
+        window.addEventListener('load', () => {
+            generateUserId();
+            checkReferralLink();
+            initSupabase();
+            checkFirstLaunch();
+        });
+        
+        // Auto-sync to Supabase every 10 seconds
+        setInterval(() => {
+            syncUserToSupabase();
+        }, 10000);
+
+
+        // Generate 6-character referral code
+        function generateReferralCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        // Apply referral code from input
+        async function applyReferralCode() {
+            const inputField = document.getElementById('referral-input-field');
+            const code = inputField.value.trim().toUpperCase();
+            
+            if (!code || code.length !== 6) {
+                showAlert('Please enter a valid 6-character code');
+                return;
+            }
+            
+            if (code === referralCode) {
+                showAlert('You cannot use your own referral code!');
+                return;
+            }
+            
+            // Check if code exists in Supabase
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('users')
+                        .select('user_id')
+                        .eq('referral_code', code)
+                        .single();
+                    
+                    if (error || !data) {
+                        showAlert('Invalid referral code');
+                        return;
+                    }
+                    
+                    // Apply referral bonus
+                    state.referredBy = code;
+                    state.balance += 500;
+                    
+                    // Award referrer
+                    await awardReferrerBonus(code);
+                    
+                    saveState();
+                    skipReferralInput();
+                    showAlert('Referral code applied! +500 FUTURE 🎉');
+                } catch (err) {
+                    console.error('Referral error:', err);
+                    showAlert('Error applying code');
+                }
+            }
+        }
+        
+        function skipReferralInput() {
+            const screen = document.getElementById('screen-referral-input');
+            if (screen) {
+                screen.style.display = 'none';
+            }
+            state.referralInputShown = true;
+            saveState();
+            showScreen('tap');
+        }
+        
+        // Show referral input on first launch
+        function checkFirstLaunch() {
+            if (!state.referralInputShown && !state.referredBy) {
+                const screen = document.getElementById('screen-referral-input');
+                if (screen) {
+                    screen.style.display = 'flex';
+                }
+            }
+        }
+        
+        // Update share text with actual referral code
+        async function shareReferralLink() {
+            if (!referralCode) {
+                generateUserId();
+            }
+            
+            const link = getReferralLink();
+            const message = `Join FUTURE-eco-system! Use my code: ${referralCode} — get 500 FREE tokens! ${link}`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'FUTURE-eco-system',
+                        text: message,
+                        url: link
+                    });
+                } catch (err) {
+                    console.log('Share cancelled');
+                }
+            } else {
+                navigator.clipboard.writeText(message);
+                showAlert('Invite text copied!');
+            }
+        }
+
+        function updateShopUI() {
+            // Update Boosts
+            const boostsList = document.getElementById('boosts-list');
+            if (boostsList) {
+                boostsList.innerHTML = '';
+                shopItems.boosts.forEach(item => {
+                    const card = createShopCard(item, 'boost');
+                    boostsList.appendChild(card);
+                });
+            }
+
+            // Update Cosmetics
+            const cosmeticsList = document.getElementById('cosmetics-list');
+            if (cosmeticsList) {
+                cosmeticsList.innerHTML = '';
+                shopItems.cosmetics.forEach(item => {
+                    const card = createShopCard(item, 'cosmetic');
+                    cosmeticsList.appendChild(card);
+                });
+            }
+
+            // Update VIP
+            const vipList = document.getElementById('vip-list');
+            if (vipList) {
+                vipList.innerHTML = '';
+                shopItems.vip.forEach(item => {
+                    const card = createShopCard(item, 'vip');
+                    vipList.appendChild(card);
+                });
+            }
+        }
+
+        function createShopCard(item, type) {
+            const card = document.createElement('div');
+            card.className = `shop-item ${type === 'vip' ? 'vip' : ''}`;
+            
+            const itemName = translations[state.lang][item.name] || item.name;
+            const itemDesc = translations[state.lang][item.desc] || item.desc;
+            const price = item.price;
+            const priceStr = item.duration === 'monthly' ? `${price} TON/mo` : `${price} TON`;
+            
+            card.innerHTML = `
+                <div style="display: flex; align-items: flex-start; flex: 1;">
+                    <div class="shop-item-icon">${item.icon}</div>
+                    <div class="shop-item-info">
+                        <div class="shop-item-name">${itemName}</div>
+                        <div class="shop-item-desc">${itemDesc}</div>
+                    </div>
+                </div>
+                <div class="shop-item-price">
+                    <div class="shop-item-price-value">${priceStr}</div>
+                    <button class="shop-buy-btn" onclick="buyShopItem('${item.id}', '${type}')">${translations[state.lang].buy}</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+
+        // Real Payment Processing
+        async function processTONPayment(itemId, amount, itemType) {
+            try {
+                if (!window._tonConnectUI) {
+                    showAlert("TonConnect not ready, try again!");
+                    return;
+                }
+                
+                if (!window._tonConnectUI.account) {
+                    showAlert("Please connect your wallet first!");
+                    return;
+                }
+                
+                showProcessingPopup(itemId);
+                
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 600,
+                    messages: [
+                        {
+                            address: OWNER_WALLET,
+                            amount: Math.floor(amount * 1e9).toString(),
+                        }
+                    ]
+                };
+                
+                const result = await window._tonConnectUI.sendTransaction(transaction);
+                
+                if (result) {
+                    await activateShopItem(itemId, itemType);
+                    showPaymentSuccessPopup();
+                    saveState();
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                showAlert("Payment failed: " + error.message);
+            }
+        }
+
+        async function activateShopItem(itemId, itemType) {
+            if (itemType === 'boost') {
+                // Find boost and activate
+                const boost = shopItems.boosts.find(b => b.id === itemId);
+                if (boost) {
+                    activateBoost(itemId, boost.duration);
+                    updateBoostTimer();
+                }
+            } else if (itemType === 'cosmetic') {
+                // Apply cosmetic
+                applyCosmetic(itemId);
+            } else if (itemType === 'vip') {
+                // Activate VIP
+                state.vipMember = true;
+                updateVIPBadge();
+            }
+        }
+
+        function showProcessingPopup(itemId) {
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.id = 'processing-overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'connection-popup';
+            popup.id = 'processing-popup';
+            popup.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 10px; animation: spin 1s linear infinite;">⏳</div>
+                <div class="popup-title">Processing Payment...</div>
+                <div style="font-size: 12px; color: #aaa; margin-top: 10px;">Confirm in your wallet</div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        }
+
+        function showPaymentSuccessPopup() {
+            const overlay = document.getElementById('processing-overlay');
+            const popup = document.getElementById('processing-popup');
+            
+            if (popup) {
+                popup.innerHTML = `
+                    <div style="font-size: 40px; margin-bottom: 10px;">✅</div>
+                    <div class="popup-title">Payment Successful!</div>
+                    <div style="font-size: 12px; color: var(--teal-accent); margin-top: 10px;">Item activated</div>
+                `;
+                
+                setTimeout(() => {
+                    overlay.remove();
+                    popup.remove();
+                }, 2000);
+            }
+        }
+
+        function showAlert(message) {
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'connection-popup';
+            popup.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+                <div class="popup-title">${message}</div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            
+            setTimeout(() => {
+                overlay.remove();
+                popup.remove();
+            }, 2500);
+        }
+
+        // Update buyShopItem to use real payments
+        function buyShopItem(itemId, type) {
+            // Find item and get price
+            let item = null;
+            let amount = 0;
+            
+            if (type === 'boost') {
+                item = shopItems.boosts.find(b => b.id === itemId);
+                amount = item ? item.price : 0;
+            } else if (type === 'cosmetic') {
+                item = shopItems.cosmetics.find(c => c.id === itemId);
+                amount = item ? item.price : 0;
+            } else if (type === 'vip') {
+                item = shopItems.vip.find(v => v.id === itemId);
+                amount = item ? item.price : 0;
+            }
+            
+            if (item && amount > 0) {
+                processTONPayment(itemId, amount, type);
+            }
+        }
+
+        
+
+        function showPaymentPopup() {
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.id = 'payment-popup-overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'connection-popup';
+            popup.id = 'payment-popup';
+            popup.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 10px;">🚀</div>
+                <div class="popup-title">${translations[state.lang].comingSoonPayment}</div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            
+            setTimeout(() => {
+                popup.remove();
+                overlay.remove();
+            }, 2000);
+        }
+
+        function applyCosmetic(cosmeticId) {
+            const bee = document.getElementById('crystal-bee');
+            if (bee) {
+                bee.classList.remove('bee-golden', 'bee-rainbow', 'bee-galaxy');
+                
+                const cosmetic = shopItems.cosmetics.find(c => c.id === cosmeticId);
+                if (cosmetic && cosmetic.class) {
+                    bee.classList.add(cosmetic.class);
+                }
+            }
+            
+            state.cosmetic = cosmeticId;
+            saveState();
+        }
+
+        function activateBoost(boostId, duration) {
+            const now = Date.now();
+            state.activeBoosters[boostId] = now + (duration * 1000);
+            saveState();
+            updateBoostTimer();
+        }
+
+        function updateBoostTimer() {
+            const gameScreen = document.getElementById('screen-tap');
+            let timerDiv = gameScreen.querySelector('.boost-timer');
+            
+            if (!timerDiv) {
+                timerDiv = document.createElement('div');
+                timerDiv.className = 'boost-timer';
+                gameScreen.appendChild(timerDiv);
+            }
+            
+            const now = Date.now();
+            let totalTimeLeft = 0;
+            let activeCount = 0;
+            
+            for (let boostId in state.activeBoosters) {
+                const expiresAt = state.activeBoosters[boostId];
+                if (expiresAt > now) {
+                    totalTimeLeft = Math.max(totalTimeLeft, expiresAt - now);
+                    activeCount++;
+                } else {
+                    delete state.activeBoosters[boostId];
+                }
+            }
+            
+            if (activeCount > 0) {
+                const minutes = Math.floor(totalTimeLeft / 60000);
+                const seconds = Math.floor((totalTimeLeft % 60000) / 1000);
+                timerDiv.innerHTML = `${translations[state.lang].boostActive}${minutes}${translations[state.lang].minutes} ${seconds}${translations[state.lang].seconds}`;
+                timerDiv.style.display = 'block';
+                
+                setTimeout(updateBoostTimer, 1000);
+            } else {
+                timerDiv.style.display = 'none';
+                saveState();
+            }
+        }
+
+        function updateVIPBadge() {
+            const headerLeft = document.querySelector('.header-left');
+            let vipBadge = headerLeft.querySelector('.vip-badge');
+            
+            if (state.vipMember) {
+                if (!vipBadge) {
+                    vipBadge = document.createElement('span');
+                    vipBadge.className = 'vip-badge';
+                    headerLeft.appendChild(vipBadge);
+                }
+                vipBadge.textContent = translations[state.lang].vipBadge;
+            } else if (vipBadge) {
+                vipBadge.remove();
+            }
+        }
+
+        // Update showScreen to handle shop
+        const originalShowScreen = showScreen;
+        showScreen = function(screenId) {
+            originalShowScreen(screenId);
+            if (screenId === 'shop') {
+                updateShopUI();
+            } else if (screenId === 'tap') {
+                updateBoostTimer();
+            }
+        };
+
+        // Apply saved cosmetic on load
+        window.addEventListener('load', () => {
+            if (state.cosmetic) {
+                applyCosmetic(state.cosmetic);
+            }
+            updateVIPBadge();
+            updateBoostTimer();
+        });
+
+        // TonConnect initialization
+        window._tonConnectUI = null;
+        
+        async function initTonConnect() {
+            try {
+                const TC = window.TonConnectUI || (window.TON && window.TON.TonConnectUI);
+                if (!TC) { console.error('TonConnectUI not loaded'); return; }
+                window._tonConnectUI = new TC({
+                    manifestUrl: 'https://luxury-gaufre-9f508d.netlify.app/tonconnect-manifest.json',
+                    buttonRootId: null,
+                });
+                window._tonConnectUI.onStatusChange(wallet => {
+                    if (wallet) {
+                        const addr = wallet.account.address;
+                        const short = addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+                        state.connectedWallet = wallet.device.appName || 'Tonkeeper';
+                        state.walletAddress = addr;
+                        state.walletAddressShort = short;
+                        state.walletBalance = null;
+                        saveState();
+                        updateWalletUI();
+                        updateHeaderWithWallet();
+                    } else {
+                        state.connectedWallet = null;
+                        state.walletAddress = null;
+                        state.walletAddressShort = null;
+                        saveState();
+                        updateWalletUI();
+                        updateHeaderWithWallet();
+                    }
+                });
+                console.log('TonConnect initialized ✅');
+            } catch (err) {
+                console.error('TonConnect init error:', err);
+            }
+        }
+        
+        // Initialize TonConnect on page load
+        window.addEventListener('load', () => {
+            setTimeout(initTonConnect, 800);
+        });
+        
+        // ===== REFERRAL SYSTEM =====
+        function showReferralPopup() {
+            if (state.referralInputShown) return;
+            state.referralInputShown = true;
+            saveState();
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            overlay.innerHTML = `
+                <div style="background:#0d1a2e;border:1px solid #00ddb4;border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center;">
+                    <div style="font-size:36px;margin-bottom:12px;">🐝</div>
+                    <div style="font-size:18px;font-weight:700;color:#00ddb4;margin-bottom:8px;">Got a referral code?</div>
+                    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:16px;">Enter code and get <b style="color:#00ddb4">+500 FUTURE</b> tokens!</div>
+                    <input id="ref-input" type="text" placeholder="Enter code..." style="width:100%;padding:12px;border-radius:10px;border:1px solid #00ddb4;background:rgba(0,221,180,0.1);color:#fff;font-size:14px;text-align:center;margin-bottom:12px;outline:none;">
+                    <button onclick="applyReferralCode()" style="width:100%;padding:12px;background:#00ddb4;border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:8px;">Get +500 tokens! 🎁</button>
+                    <button onclick="this.closest('div').parentElement.remove()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;">Skip</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function applyReferralCode() {
+            const code = document.getElementById('ref-input').value.trim().toUpperCase();
+            if (!code) { alert('Please enter a code!'); return; }
+            if (code === state.referralCode) { alert('You cannot use your own code!'); return; }
+            
+            state.referredBy = code;
+            state.balance += 500;
+            saveState();
+            updateUI();
+            
+            document.querySelector('[style*="position:fixed"]')?.remove();
+            alert('✅ Code applied! +500 FUTURE tokens added! 🎉');
+        }
+
+        // Show referral popup after 2 seconds on first launch
+        setTimeout(() => {
+            if (!state.referralInputShown && !state.referredBy) {
+                showReferralPopup();
+            }
+        }, 2000);
+        // ===== END REFERRAL SYSTEM =====
+
+
+        // These override all previous fake wallet functions
+        
+        async function initTonConnect() {
+            try {
+                // Debug: find what's available
+                const tonGlobals = Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('ton') || k.toLowerCase().includes('connect')
+                );
+                console.log('TON globals found:', tonGlobals);
+                
+                // TON_CONNECT_UI is namespace, need .TonConnectUI class inside
+                const ns = window.TON_CONNECT_UI;
+                const TC = (ns && ns.TonConnectUI) ? ns.TonConnectUI :
+                           (ns && typeof ns === 'function') ? ns :
+                           window.TonConnectUI;
+                           
+                if (!TC) { 
+                    console.log('No TonConnect class. NS keys:', ns ? Object.keys(ns).join(',') : 'none');
+                    setTimeout(initTonConnect, 2000);
+                    return; 
+                }
+                
+                window._tc = new TC({
+                    manifestUrl: 'https://luxury-gaufre-9f508d.netlify.app/tonconnect-manifest.json',
+                    buttonRootId: null,
+                });
+                
+                window._tc.onStatusChange(wallet => {
+                    if (wallet) {
+                        const addr = wallet.account.address;
+                        const short = addr.substring(0,6) + '...' + addr.substring(addr.length-4);
+                        state.connectedWallet = wallet.device?.appName || 'Tonkeeper';
+                        state.walletAddress = addr;
+                        state.walletAddressShort = short;
+                        saveState();
+                        if(typeof updateWalletUI === 'function') updateWalletUI();
+                        if(typeof updateHeaderWithWallet === 'function') updateHeaderWithWallet();
+                        if(typeof renderWalletScreen === 'function') renderWalletScreen();
+                        // Show real success
+                        alert('✅ ' + state.connectedWallet + ' connected!\n' + short);
+                    } else {
+                        state.connectedWallet = null;
+                        state.walletAddress = null;
+                        state.walletAddressShort = null;
+                        saveState();
+                        if(typeof updateWalletUI === 'function') updateWalletUI();
+                        if(typeof updateHeaderWithWallet === 'function') updateHeaderWithWallet();
+                    }
+                });
+                console.log('✅ TonConnect ready!');
+            } catch(e) { 
+                console.error('TonConnect error:', e);
+                setTimeout(initTonConnect, 2000);
+            }
+        }
+
+        async function connectWallet(walletName) {
+            try {
+                if (!window._tc) {
+                    await initTonConnect();
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+                if (!window._tc) {
+                    const ns = window.TON_CONNECT_UI;
+                    alert('Debug: NS=' + (ns ? Object.keys(ns).join(',') : 'null'));
+                    return; 
+                }
+                await window._tc.openModal();
+            } catch(e) { 
+                alert('Error: ' + e.message); 
+            }
+        }
+
+        function disconnectWallet() {
+            if (window._tc) window._tc.disconnect();
+            state.connectedWallet = null;
+            state.walletAddress = null;
+            state.walletAddressShort = null;
+            saveState();
+            if(typeof updateWalletUI === 'function') updateWalletUI();
+            if(typeof renderWalletScreen === 'function') renderWalletScreen();
+        }
+
+        async function processTONPayment(itemId, amount, itemType) {
+            try {
+                if (!window._tc) { alert('TonConnect not ready, try again in 2 seconds!'); return; }
+                if (!window._tc.account) { alert('Please connect Tonkeeper wallet first!'); return; }
+                const tx = {
+                    validUntil: Math.floor(Date.now()/1000) + 600,
+                    messages: [{
+                        address: 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE',
+                        amount: Math.floor(amount * 1e9).toString()
+                    }]
+                };
+                const result = await window._tc.sendTransaction(tx);
+                if (result) {
+                    if(typeof activateShopItem === 'function') await activateShopItem(itemId, itemType);
+                    alert('✅ Payment successful! Item activated!');
+                    saveState();
+                }
+            } catch(e) { 
+                alert('Payment failed: ' + e.message); 
+            }
+        }
+        // ===== END OVERRIDE =====
+
+        // Initial update
+        updateUI();
+        updateHeaderWithWallet();
+    </script>
+</body>
+</html>
