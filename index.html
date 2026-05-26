@@ -227,13 +227,14 @@
         /* Scrollable screens */
         #screen-spin.active, #screen-whitepaper.active, #screen-wallet.active,
         #screen-tasks.active, #screen-shop.active, #screen-leaderboard.active {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: stretch !important;
             overflow-y: auto !important;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             padding: 16px 16px 80px !important;
-            justify-content: unset !important;
-            align-items: unset !important;
         }
 
         .main-game {
@@ -648,6 +649,10 @@
             border-radius: 10px;
             margin-bottom: 20px;
             text-align: center;
+        }
+
+        .wallet-status:empty {
+            display: none;
         }
 
         .wallet-status-connected {
@@ -1774,7 +1779,7 @@
             } else if (screenId === 'wallet') {
                 updateWalletUI();
             } else if (screenId === 'spin') {
-                setTimeout(initSpinScreen, 100);
+                initSpinScreen();
             }
         }
 
