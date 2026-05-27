@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FUTURE-eco-system</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FUTURE">
+    <link rel="apple-touch-icon" href="icon.png">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonconnect/ui@2.0.8/dist/tonconnect-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.js"></script>
+    <style>
+        :root {
+            --bg-color: #050d14;
+            --teal-accent: #00ddb4;
+            --purple-accent: #7c3aed;
+            --text-color: #ffffff;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); position: relative; padding-bottom: 70px; }
+        /* Hide TonConnect auto-injected button */
+        tc-root { display: none !important; }
+
+        /* Splash */
+        .splash-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg-color); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; animation: fadeOut 0.5s ease-in-out 2s forwards; }
+        @keyframes fadeOut { from { opacity:1; } to { opacity:0; visibility:hidden; pointer-events:none; } }
+        .splash-text { font-size:28px; font-weight:bold; background: linear-gradient(to right, var(--teal-accent), var(--purple-accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        @keyframes float { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-20px); } }
+
+        /* Stars */
+        .stars-container { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; background-image: radial-gradient(1px 1px at 20px 30px,#eee,rgba(0,0,0,0)),radial-gradient(1px 1px at 40px 70px,#fff,rgba(0,0,0,0)),radial-gradient(1px 1px at 50px 160px,#ddd,rgba(0,0,0,0)),radial-gradient(2px 2px at 90px 40px,#fff,rgba(0,0,0,0)),radial-gradient(2px 2px at 130px 80px,#fff,rgba(0,0,0,0)),radial-gradient(1px 1px at 160px 120px,#ddd,rgba(0,0,0,0)); background-repeat:repeat; background-size:200px 200px; opacity:0.5; }
+
+        /* Header */
+        header { position:fixed; top:0; left:0; width:100%; padding:12px 15px; display:flex; justify-content:space-between; align-items:center; z-index:200; background:var(--bg-color); border-bottom:1px solid rgba(0,221,180,0.2); }
+        .header-left { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .user-info { text-align:left; }
+        .username { font-size:12px; color:var(--teal-accent); text-transform:uppercase; }
+        .balance-amount { font-size:22px; font-weight:bold; background:linear-gradient(to right,var(--teal-accent),var(--purple-accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .header-right { display:flex; gap:10px; align-items:center; }
+        .lang-switcher { background:rgba(255,255,255,0.1); border:1px solid var(--teal-accent); color:white; padding:5px 10px; border-radius:5px; outline:none; font-size:12px; }
+        .vip-badge { background:linear-gradient(135deg,#FFD700,#FFA500); color:#000; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold; }
+        .wallet-indicator { display:flex; flex-direction:column; gap:2px; padding:4px 8px; background:rgba(0,221,180,0.1); border-radius:5px; font-size:11px; border:1px solid rgba(0,221,180,0.3); }
+
+        /* Nav Tabs */
+        .nav-tabs { position:fixed; top:58px; left:0; width:100%; display:flex; gap:0; border-bottom:1px solid rgba(255,255,255,0.1); z-index:199; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; background:var(--bg-color); }
+        .nav-tabs::-webkit-scrollbar { display:none; }
+        .nav-tab { flex:1; min-width:70px; padding:10px 8px; text-align:center; background:transparent; border:none; color:#aaa; cursor:pointer; font-weight:bold; font-size:11px; border-bottom:3px solid transparent; transition:all 0.3s; white-space:nowrap; }
+        .nav-tab.active { color:var(--teal-accent); border-bottom-color:var(--teal-accent); }
+
+        /* Main */
+        .main-content { width:100%; padding-top:108px; }
+        .screen { display:none; width:100%; }
+        .screen.active { display:block; }
+        #screen-tap.active { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100dvh - 128px); }
+        #screen-wallet.active,#screen-spin.active,#screen-whitepaper.active,#screen-tasks.active,#screen-shop.active,#screen-leaderboard.active { padding:16px 16px 80px; }
+
+        /* Tap screen */
+        .main-game { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; position:relative; }
+        .mascot-container { position:relative; width:250px; height:250px; display:flex; justify-content:center; align-items:center; cursor:pointer; transition:transform 0.1s; }
+        .mascot-container:active { transform:scale(0.95); }
+        .rings { position:absolute; width:280px; height:280px; border:2px solid var(--teal-accent); border-radius:50%; opacity:0.3; animation:pulse 2s infinite ease-in-out; }
+        .rings::after { content:''; position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border:1px solid var(--purple-accent); border-radius:50%; animation:pulse 2s infinite ease-in-out reverse; }
+        @keyframes pulse { 0%{ transform:scale(0.9); opacity:0.2; } 50%{ transform:scale(1.1); opacity:0.5; } 100%{ transform:scale(0.9); opacity:0.2; } }
+        .mascot { width:180px; height:180px; animation:float 3s infinite ease-in-out; filter:drop-shadow(0 0 15px var(--purple-accent)); z-index:2; }
+        .wing { transform-origin:center; animation:flap 0.2s infinite alternate; }
+        @keyframes flap { from{ transform:rotateY(0deg); } to{ transform:rotateY(60deg); } }
+        .stats-overlay { width:85%; margin-bottom:30px; }
+        .level-info { display:flex; justify-content:space-between; margin-bottom:5px; font-size:14px; }
+        .progress-bar-bg { width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden; margin-bottom:15px; }
+        .progress-bar-fill { height:100%; background:linear-gradient(to right,var(--teal-accent),var(--purple-accent)); width:0%; transition:width 0.3s; }
+        .energy-container { display:flex; align-items:center; gap:10px; }
+        .energy-icon { color:var(--teal-accent); font-size:18px; }
+        .energy-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; }
+        .energy-bar-fill { height:100%; background:var(--teal-accent); width:100%; transition:width 0.1s; }
+        .energy-text { font-size:14px; width:60px; text-align:right; }
+        .cards-row { display:flex; gap:15px; width:85%; margin-bottom:20px; }
+        .stat-card { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:15px; text-align:center; }
+        .card-label { font-size:10px; text-transform:uppercase; color:#aaa; margin-bottom:5px; }
+        .card-value { font-size:18px; font-weight:bold; color:var(--teal-accent); }
+        .floating-text { position:fixed; color:var(--teal-accent); font-weight:bold; font-size:24px; pointer-events:none; animation:floatUp 0.8s forwards; z-index:100; }
+        @keyframes floatUp { 0%{ transform:translateY(0); opacity:1; } 100%{ transform:translateY(-100px); opacity:0; } }
+
+        /* Leaderboard */
+        .leaderboard-item { background:rgba(255,255,255,0.05); border:1px solid rgba(0,221,180,0.2); border-radius:10px; padding:12px; display:flex; align-items:center; gap:12px; margin-bottom:10px; transition:all 0.3s; }
+        .leaderboard-item.current-user { background:rgba(0,221,180,0.15); border-color:var(--teal-accent); box-shadow:0 0 15px rgba(0,221,180,0.3); }
+        .leaderboard-rank { font-size:18px; font-weight:bold; min-width:30px; text-align:center; }
+        .leaderboard-info { flex:1; }
+        .leaderboard-name { font-size:13px; font-weight:bold; }
+        .leaderboard-balance { font-size:11px; color:var(--teal-accent); margin-top:2px; }
+        .leaderboard-level { font-size:11px; background:rgba(0,221,180,0.2); color:var(--teal-accent); padding:4px 8px; border-radius:4px; font-weight:bold; white-space:nowrap; }
+        .lb-verified { font-size:11px; color:#FFD700; margin-left:4px; }
+        .lb-vip { font-size:11px; color:#FFD700; margin-left:4px; }
+
+        /* Tasks */
+        .task-section-title { font-size:14px; font-weight:700; color:var(--teal-accent); text-transform:uppercase; letter-spacing:1px; margin:16px 0 10px; border-bottom:1px solid rgba(0,221,180,0.2); padding-bottom:6px; }
+        .task-item { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:14px; border-radius:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+        .task-info { flex:1; }
+        .task-title { font-weight:bold; margin-bottom:4px; font-size:13px; }
+        .task-reward { font-size:12px; color:var(--teal-accent); }
+        .task-progress { width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:8px; overflow:hidden; }
+        .task-progress-bar { height:100%; background:var(--teal-accent); width:0%; transition:width 0.3s; }
+        .task-claim-btn { background:linear-gradient(45deg,var(--teal-accent),#00a89e); color:black; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:10px; font-size:12px; }
+        .task-claim-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .milestone-item { background:rgba(255,255,255,0.05); border:1px solid rgba(124,58,237,0.3); padding:12px 15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+        .milestone-item.claimed { border-color:var(--teal-accent); background:rgba(0,221,180,0.08); opacity:0.7; }
+        .milestone-item.available { border-color:#FFD700; background:rgba(255,215,0,0.05); }
+        .milestone-info { flex:1; }
+        .milestone-title { font-size:13px; font-weight:bold; color:#fff; }
+        .milestone-reward { font-size:11px; color:var(--teal-accent); margin-top:3px; }
+        .milestone-claim-btn { background:linear-gradient(45deg,#FFD700,#FFA500); color:#000; border:none; padding:7px 13px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; }
+        .milestone-claim-btn:disabled { background:rgba(255,255,255,0.1); color:#aaa; cursor:not-allowed; }
+
+        /* Shop */
+        .shop-section { margin-bottom:28px; }
+        .shop-section-title { font-size:16px; font-weight:bold; margin-bottom:12px; color:var(--teal-accent); text-transform:uppercase; letter-spacing:1px; }
+        .shop-section.gold .shop-section-title { color:#FFD700; }
+        .shop-items { display:flex; flex-direction:column; gap:10px; }
+        .shop-item { background:rgba(255,255,255,0.05); border:2px solid rgba(0,221,180,0.2); border-radius:12px; padding:14px; display:flex; justify-content:space-between; align-items:center; transition:all 0.3s; cursor:pointer; }
+        .shop-item:hover { background:rgba(255,255,255,0.08); border-color:var(--teal-accent); transform:translateY(-2px); }
+        .shop-item.vip { border-color:#FFD700; background:rgba(255,215,0,0.05); }
+        .shop-item.vip:hover { background:rgba(255,215,0,0.1); }
+        .shop-item.verified { border-color:#00ff88; background:rgba(0,255,136,0.05); }
+        .shop-item.verified:hover { background:rgba(0,255,136,0.1); }
+        .shop-item-icon { font-size:24px; margin-right:12px; }
+        .shop-item-info { flex:1; }
+        .shop-item-name { font-size:14px; font-weight:bold; margin-bottom:3px; }
+        .shop-item-desc { font-size:11px; color:#aaa; line-height:1.4; }
+        .shop-item-price { display:flex; align-items:center; gap:8px; margin-left:12px; white-space:nowrap; flex-direction:column; align-items:flex-end; }
+        .shop-item-price-value { font-size:14px; font-weight:bold; color:var(--teal-accent); }
+        .shop-item.vip .shop-item-price-value { color:#FFD700; }
+        .shop-item.verified .shop-item-price-value { color:#00ff88; }
+        .shop-buy-btn { background:linear-gradient(135deg,var(--teal-accent),#00a89a); border:none; color:#000; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; transition:all 0.3s; white-space:nowrap; }
+        .shop-buy-btn:hover { transform:scale(1.05); box-shadow:0 0 15px rgba(0,221,180,0.5); }
+        .shop-item.vip .shop-buy-btn { background:linear-gradient(135deg,#FFD700,#FFA500); color:#000; }
+        .shop-item.verified .shop-buy-btn { background:linear-gradient(135deg,#00ff88,#00cc66); color:#000; }
+
+        /* Wallet */
+        .wallet-status { background:rgba(0,221,180,0.08); border:1px solid rgba(0,221,180,0.3); padding:16px; border-radius:12px; margin-bottom:16px; text-align:center; }
+        .wallet-status-connected { display:flex; align-items:center; justify-content:center; gap:10px; }
+        .wallet-status-dot { width:10px; height:10px; background:#00ff00; border-radius:50%; animation:pulsedot 1.5s infinite; }
+        @keyframes pulsedot { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+        .wallet-status-text { font-weight:bold; color:var(--teal-accent); font-size:14px; }
+        .wallet-card { background:rgba(255,255,255,0.05); border:2px solid rgba(0,221,180,0.2); padding:15px; border-radius:12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; transition:all 0.3s; }
+        .wallet-card.connected { border-color:var(--teal-accent); background:rgba(0,221,180,0.07); }
+        .wallet-card:hover { background:rgba(255,255,255,0.08); }
+        .wallet-info { display:flex; align-items:center; gap:12px; flex:1; }
+        .wallet-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:26px; background:rgba(255,255,255,0.1); flex-shrink:0; }
+        .wallet-details .wallet-name { font-weight:bold; font-size:15px; margin-bottom:4px; }
+        .wallet-details .wallet-benefits { font-size:11px; color:#aaa; line-height:1.4; }
+        .wallet-action { display:flex; flex-direction:column; gap:6px; margin-left:10px; }
+        .connect-btn { background:linear-gradient(45deg,var(--teal-accent),#00a89e); color:black; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; transition:all 0.3s; white-space:nowrap; }
+        .connect-btn:hover { transform:scale(1.05); }
+        .disconnect-btn { background:rgba(255,255,255,0.1); color:var(--teal-accent); border:1px solid var(--teal-accent); padding:7px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; white-space:nowrap; }
+
+        /* Cosmetic Bee Styles */
+        .bee-golden { filter:hue-rotate(45deg) saturate(2) brightness(1.2); }
+        .bee-rainbow { animation:rainbowShift 3s infinite; }
+        @keyframes rainbowShift { 0%{ filter:hue-rotate(0deg); } 16%{ filter:hue-rotate(60deg); } 33%{ filter:hue-rotate(120deg); } 50%{ filter:hue-rotate(180deg); } 66%{ filter:hue-rotate(240deg); } 83%{ filter:hue-rotate(300deg); } 100%{ filter:hue-rotate(360deg); } }
+        .bee-galaxy { filter:hue-rotate(270deg) saturate(1.5) brightness(1.1); animation:galaxyGlow 2s infinite; }
+        /* Level-based bee colors */
+        .bee-lv1  { filter: none; }
+        .bee-lv2  { filter: saturate(0.5) brightness(0.9); }
+        .bee-lv3  { filter: sepia(0.3) saturate(1.2); }
+        .bee-lv4  { filter: sepia(0.6) saturate(1.5) hue-rotate(10deg); }
+        .bee-lv5  { filter: brightness(1.1) saturate(0) contrast(1.2); }
+        .bee-lv6  { filter: sepia(1) saturate(4) hue-rotate(10deg) brightness(1.1); }
+        .bee-lv7  { filter: hue-rotate(120deg) saturate(2) brightness(1.1); }
+        .bee-lv8  { filter: hue-rotate(210deg) saturate(2) brightness(1.2); }
+        .bee-lv9  { filter: hue-rotate(330deg) saturate(3) brightness(1.2); }
+        .bee-lv10 { filter: brightness(1.4) saturate(0) contrast(1.5); drop-shadow(0 0 8px #fff); }
+        .bee-lv11 { filter: hue-rotate(45deg) saturate(2) brightness(1.2); animation:galaxyGlow 2s infinite; }
+        .bee-lv12 { filter: hue-rotate(180deg) saturate(2) brightness(1.3); animation:rainbowShift 4s infinite; }
+        .bee-lv13 { filter: hue-rotate(200deg) saturate(1.5) brightness(1.1); animation:galaxyGlow 1.5s infinite; }
+        .bee-lv14 { filter: hue-rotate(270deg) saturate(2) brightness(1.2); animation:galaxyGlow 1s infinite; }
+        .bee-lv15 { filter: brightness(0.8) contrast(2) saturate(0.5); animation:rainbowShift 2s infinite; }
+        .bee-lv16 { filter: hue-rotate(30deg) saturate(3) brightness(1.3); animation:rainbowShift 1.5s infinite; }
+        .bee-lv17 { filter: hue-rotate(60deg) saturate(3) brightness(1.4); animation:rainbowShift 1s infinite; }
+        .bee-lv18 { filter: saturate(3) brightness(1.5) contrast(1.3); animation:rainbowShift 0.8s infinite; }
+        .bee-lv19 { filter: brightness(2) saturate(4) contrast(1.5); animation:rainbowShift 0.5s infinite; }
+        .bee-lv20 { filter: brightness(2.5) saturate(5) contrast(2); animation:rainbowShift 0.3s infinite; drop-shadow(0 0 20px gold); }
+        @keyframes galaxyGlow { 0%,100%{ filter:hue-rotate(270deg) saturate(1.5) brightness(1.1) drop-shadow(0 0 5px #7c3aed); } 50%{ filter:hue-rotate(270deg) saturate(1.5) brightness(1.3) drop-shadow(0 0 15px #7c3aed); } }
+        .boost-timer { background:rgba(0,221,180,0.2); border:1px solid var(--teal-accent); border-radius:8px; padding:6px 10px; font-size:11px; color:var(--teal-accent); font-weight:bold; margin-top:8px; }
+
+        /* Footer */
+        .footer-nav { position:fixed; bottom:0; width:100%; padding:8px; display:flex; justify-content:space-around; background:rgba(5,13,20,0.97); border-top:1px solid rgba(0,221,180,0.2); z-index:100; }
+        .footer-btn { background:transparent; border:none; color:#aaa; cursor:pointer; padding:8px 20px; border-radius:8px; font-size:12px; font-weight:bold; transition:all 0.3s; }
+        .footer-btn.active { color:var(--teal-accent); background:rgba(0,221,180,0.1); }
+        .boost-active-badge { position:fixed; top:80px; right:16px; background:rgba(124,58,237,0.2); border:1px solid var(--purple-accent); padding:8px 12px; border-radius:8px; font-size:11px; z-index:50; }
+
+        /* Popup / overlay */
+        .popup-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:9000; }
+        .popup-box { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#0a1523; border:2px solid var(--teal-accent); padding:28px; border-radius:16px; text-align:center; z-index:9001; min-width:280px; max-width:340px; width:90%; max-height:88dvh; overflow-y:auto; }
+        .popup-title { font-size:17px; font-weight:bold; color:var(--teal-accent); margin-bottom:10px; }
+        .popup-msg { font-size:13px; color:#aaa; margin-top:8px; }
+        .spinner { border:4px solid rgba(0,221,180,0.2); border-top:4px solid var(--teal-accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px; }
+        @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
+
+        /* Profile popup */
+        .profile-section { background:rgba(255,255,255,0.05); border-radius:10px; padding:12px; margin-bottom:12px; text-align:left; }
+        .profile-stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
+        .profile-stat-row:last-child { border-bottom:none; }
+        .profile-stat-val { color:var(--teal-accent); font-weight:bold; }
+        .achievement-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .achievement-item { background:rgba(255,255,255,0.05); border-radius:8px; padding:10px; text-align:center; }
+        .achievement-item.locked { opacity:0.35; }
+        .achievement-icon { font-size:24px; margin-bottom:4px; }
+        .achievement-label { font-size:10px; color:#aaa; line-height:1.3; }
+        .achievement-item.unlocked .achievement-label { color:var(--teal-accent); }
+        .ref-copy-row { display:flex; gap:8px; margin-top:8px; }
+        .ref-code-box { flex:1; background:rgba(0,221,180,0.1); border:1px solid rgba(0,221,180,0.4); border-radius:8px; padding:10px; font-size:16px; font-weight:bold; color:var(--teal-accent); text-align:center; letter-spacing:2px; }
+        .copy-btn { background:var(--teal-accent); color:#000; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; }
+
+        /* VIP100 badge in leaderboard */
+        .rank-vip { background:linear-gradient(135deg,#FFD700,#FFA500); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:900; }
+
+        /* Friend item */
+        .friend-item { background:rgba(255,255,255,0.05); border:1px solid rgba(0,221,180,0.2); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen">
+        <svg width="140" height="140" viewBox="0 0 200 200" style="margin-bottom:20px;animation:float 2s infinite ease-in-out;">
+            <!-- Left wing -->
+            <path d="M100 80 Q50 20 20 80 T100 100" fill="rgba(0,221,180,0.4)" stroke="#00ddb4" stroke-width="2"/>
+            <!-- Right wing -->
+            <path d="M100 80 Q150 20 180 80 T100 100" fill="rgba(0,221,180,0.4)" stroke="#00ddb4" stroke-width="2"/>
+            <!-- Body -->
+            <path d="M100 40 L140 70 L140 130 L100 160 L60 130 L60 70 Z" fill="#7c3aed" opacity="0.9"/>
+            <path d="M100 40 L140 70 L100 100 Z" fill="#9f67ff"/>
+            <path d="M60 70 L100 40 L100 100 Z" fill="#c084fc"/>
+            <!-- Head -->
+            <circle cx="100" cy="48" r="16" fill="#00ddb4"/>
+            <!-- Eyes -->
+            <circle cx="94" cy="46" r="3" fill="white"/>
+            <circle cx="106" cy="46" r="3" fill="white"/>
+            <circle cx="95" cy="47" r="1.5" fill="#333"/>
+            <circle cx="107" cy="47" r="1.5" fill="#333"/>
+        </svg>
+        <div class="splash-text">FUTURE-eco-system</div>
+    </div>
+
+    <div class="stars-container"></div>
+
+    <header>
+        <div class="header-left">
+            <div class="user-info">
+                <div class="username" id="username-display">Guest</div>
+                <div class="balance-amount"><span id="balance">0</span> FUTURE</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <select class="lang-switcher" id="lang-switcher">
+                <option value="en">EN</option>
+                <option value="ru">RU</option>
+                <option value="pt">PT</option>
+                <option value="lt">LT</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" data-screen="tap">🎮 TAP</button>
+        <button class="nav-tab" data-screen="leaderboard">📊 TOP</button>
+        <button class="nav-tab" data-screen="tasks">✅ TASKS</button>
+        <button class="nav-tab" data-screen="shop">🛍️ SHOP</button>
+        <button class="nav-tab" data-screen="wallet">💳 WALLET</button>
+        <button class="nav-tab" data-screen="spin">🎰 SPIN</button>
+        <button class="nav-tab" data-screen="whitepaper">📄 WP</button>
+    </div>
+
+    <div class="main-content">
+        <!-- TAP SCREEN -->
+        <div class="screen active" id="screen-tap">
+            <div class="main-game">
+                <div class="mascot-container" id="mascot-btn">
+                    <div class="rings"></div>
+                    <svg class="mascot" id="crystal-bee" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <path class="wing" d="M100 80 Q150 20 180 80 T100 100" fill="rgba(0,221,180,0.4)" stroke="var(--teal-accent)" stroke-width="2"/>
+                        <path class="wing" d="M100 80 Q50 20 20 80 T100 100" fill="rgba(0,221,180,0.4)" stroke="var(--teal-accent)" stroke-width="2" style="animation-delay:0.1s"/>
+                        <path d="M100 40 L140 70 L140 130 L100 160 L60 130 L60 70 Z" fill="#7c3aed" opacity="0.8"/>
+                        <path d="M100 40 L140 70 L100 100 Z" fill="#9f67ff"/>
+                        <path d="M140 70 L140 130 L100 100 Z" fill="#5b21b6"/>
+                        <path d="M140 130 L100 160 L100 100 Z" fill="#4c1d95"/>
+                        <path d="M100 160 L60 130 L100 100 Z" fill="#5b21b6"/>
+                        <path d="M60 130 L60 70 L100 100 Z" fill="#9f67ff"/>
+                        <path d="M60 70 L100 40 L100 100 Z" fill="#c084fc"/>
+                        <circle cx="100" cy="50" r="15" fill="#00ddb4"/>
+                        <circle cx="95" cy="48" r="2" fill="white"/><circle cx="105" cy="48" r="2" fill="white"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="stats-overlay">
+                <div class="level-info"><span id="level-name">Crystal Larva</span><span id="level-ratio">0/100</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="xp-bar"></div></div>
+                <div class="energy-container">
+                    <div class="energy-icon">⚡</div>
+                    <div class="energy-bar-bg"><div class="energy-bar-fill" id="energy-bar"></div></div>
+                    <div class="energy-text"><span id="energy-val">500</span>/<span id="max-energy-val">500</span></div>
+                </div>
+                <div id="boost-timer-display" style="display:none;" class="boost-timer"></div>
+            </div>
+            <div class="cards-row">
+                <div class="stat-card"><div class="card-label">Total Taps</div><div class="card-value" id="total-taps">0</div></div>
+                <div class="stat-card"><div class="card-label">Friends</div><div class="card-value" id="friends-count">0</div></div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD SCREEN -->
+        <div class="screen" id="screen-leaderboard">
+            <div id="leaderboard-list"></div>
+        </div>
+
+        <!-- TASKS SCREEN -->
+        <div class="screen" id="screen-tasks">
+            <div id="tasks-list"></div>
+        </div>
+
+        <!-- SHOP SCREEN -->
+        <div class="screen" id="screen-shop">
+            <div class="shop-section">
+                <div class="shop-section-title">⚡ BOOSTS</div>
+                <div class="shop-items" id="boosts-list"></div>
+            </div>
+            <div class="shop-section">
+                <div class="shop-section-title">💎 COSMETICS</div>
+                <div class="shop-items" id="cosmetics-list"></div>
+            </div>
+            <div class="shop-section gold">
+                <div class="shop-section-title">✅ VERIFIED PLAYER</div>
+                <div class="shop-items" id="verified-list"></div>
+            </div>
+            <div class="shop-section gold">
+                <div class="shop-section-title">👑 VIP MEMBERSHIP</div>
+                <div class="shop-items" id="vip-list"></div>
+            </div>
+        </div>
+
+        <!-- WALLET SCREEN -->
+        <div class="screen" id="screen-wallet">
+            <div id="wallet-status" class="wallet-status" style="display:none;"></div>
+            <div id="wallet-list"></div>
+        </div>
+
+        <!-- SPIN SCREEN -->
+        <div class="screen" id="screen-spin">
+            <div style="text-align:center;padding:10px 0 14px;">
+                <div style="font-size:32px;margin-bottom:6px;">🎰</div>
+                <div style="font-size:20px;font-weight:700;color:#FFD700;margin-bottom:4px;">Lucky Spin</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:16px;">Once per day! Spin to win FUTURE tokens!</div>
+                <div style="position:relative;width:240px;height:240px;margin:0 auto 14px;">
+                    <canvas id="spinCanvas" width="240" height="240"></canvas>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;background:#FFD700;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;z-index:2;box-shadow:0 0 15px rgba(255,215,0,0.6);">🐝</div>
+                    <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #FFD700;z-index:3;"></div>
+                </div>
+                <div id="spin-status" style="margin-bottom:14px;font-size:13px;color:rgba(255,255,255,0.6);"></div>
+                <button id="spin-btn" onclick="doSpin()" style="width:80%;max-width:280px;padding:14px;background:linear-gradient(135deg,#FFD700,#ff6b35);border:none;border-radius:12px;color:#000;font-weight:900;font-size:15px;cursor:pointer;">🎰 SPIN!</button>
+            </div>
+            <div style="margin-top:12px;">
+                <div style="font-size:13px;font-weight:700;color:#00ddb4;margin-bottom:10px;text-align:center;letter-spacing:1px;">💌 SEND GIFT</div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:14px;">
+                    <input id="gift-code" type="text" placeholder="Friend's referral code..." style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,221,180,0.3);background:rgba(0,221,180,0.06);color:#fff;font-size:13px;text-align:center;margin-bottom:8px;outline:none;box-sizing:border-box;">
+                    <div style="display:flex;gap:6px;margin-bottom:8px;justify-content:center;flex-wrap:wrap;">
+                        <button onclick="document.getElementById('gift-amount').value='100'" style="padding:5px 10px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:8px;color:#00ddb4;font-size:11px;cursor:pointer;">100</button>
+                        <button onclick="document.getElementById('gift-amount').value='250'" style="padding:5px 10px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:8px;color:#00ddb4;font-size:11px;cursor:pointer;">250</button>
+                        <button onclick="document.getElementById('gift-amount').value='500'" style="padding:5px 10px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:8px;color:#00ddb4;font-size:11px;cursor:pointer;">500</button>
+                        <button onclick="document.getElementById('gift-amount').value='1000'" style="padding:5px 10px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:8px;color:#00ddb4;font-size:11px;cursor:pointer;">1000</button>
+                    </div>
+                    <input id="gift-amount" type="number" placeholder="Amount (min 50)..." style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,221,180,0.3);background:rgba(0,221,180,0.06);color:#fff;font-size:13px;text-align:center;margin-bottom:10px;outline:none;box-sizing:border-box;">
+                    <button onclick="sendGift()" style="width:100%;padding:11px;background:#00ddb4;border:none;border-radius:10px;color:#000;font-weight:700;font-size:13px;cursor:pointer;">💌 Send Gift</button>
+                </div>
+            </div>
+            <div style="margin-top:14px;margin-bottom:16px;">
+                <div style="font-size:13px;font-weight:700;color:#FFD700;margin-bottom:10px;text-align:center;letter-spacing:1px;">🏆 WEEKLY TOP 10</div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,215,0,0.2);border-radius:14px;padding:14px;" id="weekly-top10"></div>
+            </div>
+        </div>
+
+        <!-- WHITEPAPER SCREEN -->
+        <div class="screen" id="screen-whitepaper">
+            <div style="text-align:center;margin-bottom:16px;">
+                <div style="font-size:40px;margin-bottom:6px;">🐝</div>
+                <div style="font-size:20px;font-weight:700;color:#00ddb4;">FUTURE Token</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;">Whitepaper v1.0 | 2026</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:14px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:#00ddb4;margin-bottom:8px;">📋 1. Abstract</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.6;">FUTURE-eco-system is a Telegram-based tap-to-earn gaming ecosystem built on the TON blockchain. Players earn FUTURE tokens by interacting with the Crystal Bee mascot, completing daily missions, and building referral networks.</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:14px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px;">💎 2. Token Overview</div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Token Name</span><span style="font-size:12px;color:#fff;font-weight:600;">FUTURE</span></div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Blockchain</span><span style="font-size:12px;color:#fff;font-weight:600;">TON</span></div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Total Supply</span><span style="font-size:12px;color:#fff;font-weight:600;">1,000,000,000</span></div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Standard</span><span style="font-size:12px;color:#fff;font-weight:600;">Jetton (TON)</span></div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Decimals</span><span style="font-size:12px;color:#fff;font-weight:600;">9</span></div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Network</span><span style="font-size:12px;color:#00ddb4;font-weight:700;">Mainnet</span></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,221,180,0.2);border-radius:14px;padding:14px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:#00ddb4;margin-bottom:10px;">📊 3. Token Distribution</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🎮 Play-to-Earn</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">40%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">400M</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">💧 Liquidity</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">20%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">200M</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">👥 Team</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">15%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">150M</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🚀 Marketing</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">10%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">100M</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:rgba(255,255,255,0.8);">🤝 Partners</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">8%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">80M</span></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;"><span style="font-size:12px;color:rgba(255,255,255,0.8);">💼 Reserve</span><div><span style="font-size:13px;color:#00ddb4;font-weight:700;">7%</span><span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:8px;">70M</span></div></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:14px;margin-bottom:10px;">
+                <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px;">🗺️ 4. Roadmap</div>
+                <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;color:#00ddb4;font-weight:700;">Phase 1 — Launch</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q1-Q2 2026</span></div><div style="font-size:11px;color:rgba(255,255,255,0.6);">Mini App · Crystal Bee · TON wallet · 4 languages</div></div>
+                <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;color:#00ddb4;font-weight:700;">Phase 2 — Growth</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q3 2026</span></div><div style="font-size:11px;color:rgba(255,255,255,0.6);">Token launch · Ston.fi DEX · 100,000 users</div></div>
+                <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;color:#7c3aed;font-weight:700;">Phase 3 — Expansion</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">Q4 2026</span></div><div style="font-size:11px;color:rgba(255,255,255,0.6);">MEXC listing · Staking · NFT collection · 500k users</div></div>
+                <div style="padding:8px 0;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;color:#7c3aed;font-weight:700;">Phase 4 — Ecosystem</span><span style="font-size:11px;color:rgba(255,255,255,0.4);">2027</span></div><div style="font-size:11px;color:rgba(255,255,255,0.6);">Governance · DeFi · Cross-chain TON-BNB · 1M users</div></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:12px;margin-bottom:12px;">
+                <div style="font-size:11px;color:rgba(255,255,255,0.3);line-height:1.5;text-align:center;">For informational purposes only. Not financial advice. Crypto investments carry significant risk.</div>
+            </div>
+            <div style="text-align:center;padding:8px 0;"><div style="font-size:13px;color:#00ddb4;font-weight:700;">🐝 Building the future, one tap at a time 💎</div></div>
+        </div>
+    </div>
+
+    <!-- Boost Indicator -->
+    <div id="boost-indicator" style="display:none;" class="boost-active-badge"></div>
+
+    <!-- Footer Navigation -->
+    <div class="footer-nav">
+        <button class="footer-btn active" id="footer-invite">📤 Invite</button>
+        <button class="footer-btn" id="footer-profile">👤 Profile</button>
+    </div>
+
+    <script>
+    // =====================================================================
+    // CONSTANTS
+    // =====================================================================
+    const OWNER_WALLET   = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE';
+    const MANIFEST_URL   = 'https://futureecosystem999.github.io/future-eco-system/tonconnect-manifest.json';
+    // ⚠️ Replace with your real Supabase credentials:
+    const SUPABASE_URL   = 'https://sbfkpwunsqwjplkdhsyq.supabase.co';
+    const SUPABASE_KEY   = 'sb_publishable_HHQ_nH-Zz1cSLH4E_YPDqA_ouCKsP1v';
+    const levelThresholds = [
+        0, 500, 1500, 3000, 6000, 10000, 16000, 24000, 35000, 50000,
+        70000, 100000, 140000, 200000, 280000, 400000, 600000, 900000, 1500000, 5000000
+    ];
+
+    // =====================================================================
+    // TRANSLATIONS (all keys complete)
+    // =====================================================================
+    const translations = {
+        en: {
+            levels: ["Crystal Larva","Stone Bee","Iron Bee","Bronze Bee","Silver Bee","Golden Bee","Emerald Bee","Sapphire Bee","Ruby Bee","Diamond Bee","Crystal Queen","Cosmic Bee","Nebula Bee","Galaxy Bee","Shadow Bee","Phoenix Bee","Thunder Bee","Titan Bee","Legendary Bee","GOD BEE"],
+            claim: "Claim", buy: "Buy", connected: "Connected", disconnect: "Disconnect",
+            connectWallet: "Connect Wallet", comingSoon: "Coming Soon",
+            withdrawTokens: "Withdraw FUTURE tokens — coming soon",
+            airdrop: "Airdrop will be sent to your wallet",
+            boostActive: "Boost active! ", minutes: "m ", seconds: "s",
+            vipBadge: "👑 VIP", verifiedBadge: "✅ VERIFIED",
+            energyX2: "Energy x2", energyX2Desc: "2x energy regeneration for 1h",
+            coinsX3: "Coins x3", coinsX3Desc: "3x coins per tap for 1h",
+            infiniteEnergy: "Infinite Energy", infiniteEnergyDesc: "Unlimited energy for 30min",
+            megaTap: "Mega Tap", megaTapDesc: "10x coins per tap for 15min",
+            goldenBee: "Golden Bee", goldenBeeDesc: "Golden Crystal Bee skin",
+            rainbowBee: "Rainbow Bee", rainbowBeeDesc: "Rainbow Crystal Bee skin",
+            galaxyBee: "Galaxy Bee", galaxyBeeDesc: "Galaxy Crystal Bee skin",
+            diamondWings: "Diamond Wings", diamondWingsDesc: "Crystal wings upgrade",
+            crystalVip: "Crystal VIP", crystalVipDesc: "👑 VIP badge · 3x energy · 2x taps · 2x Lucky Spin · +500 FUTURE daily",
+            verifiedPlayer: "Verified Player", verifiedPlayerDesc: "✅ Badge on leaderboard · 3x Daily Spins · 2x Energy regen"
+        },
+        ru: {
+            levels: ["Кристальная личинка","Каменная пчела","Железная пчела","Бронзовая пчела","Серебряная пчела","Золотая пчела","Изумрудная пчела","Сапфировая пчела","Рубиновая пчела","Алмазная пчела","Кристальная королева","Космическая пчела","Туманная пчела","Галактическая пчела","Теневая пчела","Феникс пчела","Громовая пчела","Титан пчела","Легендарная пчела","БОГ ПЧЕЛА"],
+            claim: "Получить", buy: "Купить", connected: "Подключено", disconnect: "Отключить",
+            connectWallet: "Подключить кошелёк", comingSoon: "Скоро",
+            withdrawTokens: "Вывод токенов — скоро", airdrop: "Airdrop придёт на ваш кошелёк",
+            boostActive: "Буст активен! ", minutes: "м ", seconds: "с",
+            vipBadge: "👑 VIP", verifiedBadge: "✅ ВЕРИФИЦИРОВАН",
+            energyX2: "Энергия x2", energyX2Desc: "2x восстановление энергии 1ч",
+            coinsX3: "Монеты x3", coinsX3Desc: "3x монеты за тап 1ч",
+            infiniteEnergy: "Бесконечная энергия", infiniteEnergyDesc: "Неограниченная энергия 30мин",
+            megaTap: "Мега Тап", megaTapDesc: "10x монеты за тап 15мин",
+            goldenBee: "Золотая пчела", goldenBeeDesc: "Золотая кристальная пчела",
+            rainbowBee: "Радужная пчела", rainbowBeeDesc: "Радужная кристальная пчела",
+            galaxyBee: "Галактическая пчела", galaxyBeeDesc: "Галактическая кристальная пчела",
+            diamondWings: "Алмазные крылья", diamondWingsDesc: "Кристальные крылья",
+            crystalVip: "Crystal VIP", crystalVipDesc: "👑 VIP значок · 3x энергия · 2x тапы · 2x Lucky Spin · +500 FUTURE ежедневно",
+            verifiedPlayer: "Верифицированный игрок", verifiedPlayerDesc: "✅ Значок в рейтинге · 3x Daily Spins · 2x Энергия"
+        },
+        pt: {
+            levels: ["Larva de Cristal","Abelha de Pedra","Abelha de Ferro","Abelha de Bronze","Abelha de Prata","Abelha de Ouro","Abelha Esmeralda","Abelha Safira","Abelha Rubi","Abelha Diamante","Rainha de Cristal","Abelha Cósmica","Abelha Nebulosa","Abelha Galáxia","Abelha Sombra","Abelha Fênix","Abelha Trovão","Abelha Titã","Abelha Lendária","ABELHA DEUS"],
+            claim: "Reclamar", buy: "Comprar", connected: "Conectado", disconnect: "Desconectar",
+            connectWallet: "Conectar Carteira", comingSoon: "Em Breve",
+            withdrawTokens: "Sacar tokens — em breve", airdrop: "Airdrop será enviado para sua carteira",
+            boostActive: "Bônus ativo! ", minutes: "m ", seconds: "s",
+            vipBadge: "👑 VIP", verifiedBadge: "✅ VERIFICADO",
+            energyX2: "Energia x2", energyX2Desc: "2x regeneração de energia 1h",
+            coinsX3: "Moedas x3", coinsX3Desc: "3x moedas por toque 1h",
+            infiniteEnergy: "Energia Infinita", infiniteEnergyDesc: "Energia ilimitada 30min",
+            megaTap: "Mega Toque", megaTapDesc: "10x moedas por toque 15min",
+            goldenBee: "Abelha Dourada", goldenBeeDesc: "Skin abelha dourada",
+            rainbowBee: "Abelha Arco-íris", rainbowBeeDesc: "Skin abelha arco-íris",
+            galaxyBee: "Abelha Galáxia", galaxyBeeDesc: "Skin abelha galáxia",
+            diamondWings: "Asas de Diamante", diamondWingsDesc: "Asas de cristal",
+            crystalVip: "Crystal VIP", crystalVipDesc: "👑 Badge VIP · 3x energia · 2x toques · 2x Lucky Spin · +500 FUTURE diário",
+            verifiedPlayer: "Jogador Verificado", verifiedPlayerDesc: "✅ Badge no ranking · 3x Daily Spins · 2x Energia"
+        },
+        lt: {
+            levels: ["Kristalinė lerva","Akmeninė bitė","Geležinė bitė","Bronzinė bitė","Sidabrinė bitė","Auksinė bitė","Smaragdinė bitė","Safyrinė bitė","Rubininė bitė","Deimantinė bitė","Kristalinė karalienė","Kosminė bitė","Ūkanų bitė","Galaktinė bitė","Šešėlinė bitė","Fenikso bitė","Griaustinio bitė","Titano bitė","Legendinė bitė","DIEVO BITĖ"],
+            claim: "Gauti", buy: "Pirkti", connected: "Prijungta", disconnect: "Atjungti",
+            connectWallet: "Prijungti piniginę", comingSoon: "Jau greitai",
+            withdrawTokens: "Išimti žetonus — greitai", airdrop: "Airdrop bus išsiųstas",
+            boostActive: "Būstas aktyvus! ", minutes: "min ", seconds: "s",
+            vipBadge: "👑 VIP", verifiedBadge: "✅ PATIKRINTAS",
+            energyX2: "Energija x2", energyX2Desc: "2x energijos regeneracija 1val",
+            coinsX3: "Monetų x3", coinsX3Desc: "3x monetos per paspaudimą 1val",
+            infiniteEnergy: "Begalinė energija", infiniteEnergyDesc: "Neribota energija 30min",
+            megaTap: "Mega Paspaudimas", megaTapDesc: "10x monetos per paspaudimą 15min",
+            goldenBee: "Auksinė bitė", goldenBeeDesc: "Auksinė kristalinė bitė",
+            rainbowBee: "Vaivorykštinė bitė", rainbowBeeDesc: "Vaivorykštinė kristalinė bitė",
+            galaxyBee: "Galaktinė bitė", galaxyBeeDesc: "Galaktinė kristalinė bitė",
+            diamondWings: "Deimantiniai sparnai", diamondWingsDesc: "Kristaliniai sparnai",
+            crystalVip: "Crystal VIP", crystalVipDesc: "👑 VIP ženklas · 3x energija · 2x paspaudimai · 2x Lucky Spin · +500 FUTURE kasdien",
+            verifiedPlayer: "Patikrintas žaidėjas", verifiedPlayerDesc: "✅ Ženklas reitinge · 3x Daily Spins · 2x Energija"
+        }
+    };
+
+    // =====================================================================
+    // STATE
+    // =====================================================================
+    let state = {
+        userId: null, username: 'Player_' + Math.random().toString(36).substring(7),
+        balance: 0, totalTaps: 0, friends: 0,
+        energy: 500, maxEnergy: 500, lang: 'en',
+        referralCode: null, referredBy: null, referralCount: 0,
+        referralInputShown: false, invitedFriends: [],
+        tasks: { tap: {completed:0,target:500}, invite: {completed:0,target:1}, streak: {completed:0,target:3} },
+        lastTaskReset: Date.now(), lastAppOpen: Date.now(), streakDays: 0,
+        connectedWallet: null, walletAddress: null, walletAddressShort: null,
+        walletBalance: null, walletType: null, paymentHistory: [],
+        boosts: {}, activeBoosters: {}, cosmetic: null,
+        vipMember: false, verifiedPlayer: false,
+        milestonesClaimed: [], lastSpinDate: null, lastVipBonus: null
+    };
+
+    const saved = localStorage.getItem('future_eco_state_v2');
+    if (saved) { try { state = {...state, ...JSON.parse(saved)}; } catch(e) {} }
+
+    // Telegram WebApp init
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready(); tg.expand();
+        if (tg.initDataUnsafe?.user) {
+            const u = tg.initDataUnsafe.user;
+            state.userId = String(u.id);
+            state.username = u.username || u.first_name || `User${u.id}`;
+            if (!state.referralCode) state.referralCode = 'F' + String(u.id).slice(-5).toUpperCase();
+        }
+    }
+    if (!state.referralCode) state.referralCode = generateReferralCode();
+
+    // =====================================================================
+    // SUPABASE
+    // =====================================================================
+    let supabaseClient = null;
+    let userId = state.userId;
+    let referralCode = state.referralCode;
+
+    function initSupabase() {
+        try {
+            if (typeof window.supabase !== 'undefined' &&
+                SUPABASE_URL.includes('supabase.co') && !SUPABASE_URL.includes('YOUR_PROJECT')) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('✅ Supabase connected');
+            }
+        } catch(e) { console.log('Supabase init failed:', e); }
+    }
+
+    async function fetchLeaderboard() {
+        if (!supabaseClient) return [];
+        try {
+            const { data, error } = await supabaseClient.from('users')
+                .select('user_id, username, balance, level, verified_player, vip_member')
+                .order('balance', { ascending: false }).limit(50);
+            if (error) return [];
+            return data || [];
+        } catch(e) { return []; }
+    }
+
+    async function syncUserToSupabase() {
+        if (!supabaseClient || !state.userId) return;
+        try {
+            const levelIndex = getLevelIndex();
+            await supabaseClient.from('users').upsert({
+                user_id: state.userId,
+                username: state.username,
+                balance: Math.floor(state.balance),
+                total_taps: state.totalTaps,
+                level: levelIndex + 1,
+                referral_code: state.referralCode,
+                referred_by: state.referredBy,
+                referral_count: state.referralCount,
+                verified_player: state.verifiedPlayer,
+                vip_member: state.vipMember,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' });
+        } catch(e) {}
+    }
+
+    async function awardReferrerBonus(code) {
+        if (!supabaseClient || !code) return;
+        try {
+            const { data } = await supabaseClient.from('users')
+                .select('user_id, balance, referral_count').eq('referral_code', code).single();
+            if (data) {
+                await supabaseClient.from('users').update({
+                    balance: (data.balance || 0) + 500,
+                    referral_count: (data.referral_count || 0) + 1
+                }).eq('user_id', data.user_id);
+            }
+        } catch(e) {}
+    }
+
+    async function getInvitedFriends() {
+        if (!supabaseClient || !state.referralCode) return [];
+        try {
+            const { data } = await supabaseClient.from('users')
+                .select('username, balance').eq('referred_by', state.referralCode).limit(50);
+            return data || [];
+        } catch(e) { return []; }
+    }
+
+    function generateReferralCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+    }
+
+    function checkReferralLink() {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref') || params.get('start');
+        if (ref && !state.referredBy && ref !== state.referralCode) {
+            state.referredBy = ref.toUpperCase();
+            state.balance += 500;
+            saveState();
+            showAlert('🎁 Referral code applied! +500 FUTURE!');
+            awardReferrerBonus(state.referredBy);
+        }
+    }
+
+    // =====================================================================
+    // CORE FUNCTIONS
+    // =====================================================================
+    const navTabs = document.querySelectorAll('.nav-tab');
+    const screens = document.querySelectorAll('.screen');
+
+    navTabs.forEach(tab => tab.addEventListener('click', () => showScreen(tab.dataset.screen)));
+
+    function showScreen(screenId) {
+        screens.forEach(s => s.classList.remove('active'));
+        navTabs.forEach(t => t.classList.remove('active'));
+        const scr = document.getElementById('screen-' + screenId);
+        if (scr) scr.classList.add('active');
+        const tab = document.querySelector(`[data-screen="${screenId}"]`);
+        if (tab) tab.classList.add('active');
+        if (screenId === 'leaderboard') updateLeaderboard();
+        else if (screenId === 'tasks') updateTasksUI();
+        else if (screenId === 'shop') updateShopUI();
+        else if (screenId === 'wallet') updateWalletUI();
+        else if (screenId === 'spin') initSpinScreen();
+    }
+
+    function saveState() {
+        localStorage.setItem('future_eco_state_v2', JSON.stringify(state));
+        userId = state.userId;
+        referralCode = state.referralCode;
+    }
+
+    function getLevelIndex() {
+        let li = 0;
+        for (let i = levelThresholds.length - 1; i >= 0; i--) {
+            if (state.balance >= levelThresholds[i]) { li = i; break; }
+        }
+        return li;
+    }
+
+    function getEarnPerTap() {
+        let earn = 1 + getLevelIndex();
+        if (state.activeBoosters.coins3x && state.activeBoosters.coins3x > Date.now()) earn *= 3;
+        if (state.activeBoosters.megaTap && state.activeBoosters.megaTap > Date.now()) earn *= 10;
+        if (state.vipMember) earn *= 2;
+        return earn;
+    }
+
+    function getMaxEnergy() {
+        let max = 500;
+        if (state.verifiedPlayer) max *= 2;
+        if (state.vipMember) max = Math.max(max, 1500);
+        return max;
+    }
+
+    function updateUI() {
+        document.getElementById('balance').innerText = Math.floor(state.balance);
+        document.getElementById('total-taps').innerText = state.totalTaps;
+        document.getElementById('friends-count').innerText = state.referralCount || 0;
+        document.getElementById('username-display').innerText = state.username;
+        document.getElementById('lang-switcher').value = state.lang;
+
+        const maxE = getMaxEnergy();
+        state.maxEnergy = maxE;
+        const ep = (state.energy / maxE) * 100;
+        document.getElementById('energy-bar').style.width = Math.min(ep, 100) + '%';
+        document.getElementById('energy-val').innerText = Math.floor(state.energy);
+        document.getElementById('max-energy-val').innerText = maxE;
+
+        const li = getLevelIndex();
+        document.getElementById('level-name').innerText = translations[state.lang].levels[li];
+        if (li < levelThresholds.length - 1) {
+            const next = levelThresholds[li + 1], cur = levelThresholds[li];
+            document.getElementById('xp-bar').style.width = Math.min(((state.balance - cur) / (next - cur)) * 100, 100) + '%';
+            document.getElementById('level-ratio').innerText = `${Math.floor(state.balance)} / ${next}`;
+        } else {
+            document.getElementById('xp-bar').style.width = '100%';
+            document.getElementById('level-ratio').innerText = 'MAX';
+        }
+
+        // Boost indicator
+        const now = Date.now();
+        let activeBoosted = false;
+        for (const k in state.activeBoosters) { if (state.activeBoosters[k] > now) { activeBoosted = true; break; } }
+        const bi = document.getElementById('boost-indicator');
+        bi.style.display = activeBoosted ? 'block' : 'none';
+        if (activeBoosted) bi.innerText = '⚡ Boost Active!';
+
+        // VIP via 100 referrals check
+        checkVIP100();
+        updateVIPBadge();
+        updateHeaderWithWallet();
+        checkAndAwardVIPBonus();
+        updateBeeLevel();
+    }
+
+    // =====================================================================
+    // TAP
+    // =====================================================================
+    const elMascotBtn = document.getElementById('mascot-btn');
+
+    function handleTap(e) {
+        if (state.energy >= 1) {
+            const earn = getEarnPerTap();
+            state.balance += earn;
+            state.totalTaps++;
+            state.energy = Math.max(0, state.energy - 1);
+            state.tasks.tap.completed++;
+            const x = e.clientX || e.touches?.[0]?.clientX || window.innerWidth / 2;
+            const y = e.clientY || e.touches?.[0]?.clientY || window.innerHeight / 2;
+            showFloatingText(x, y, `+${earn}`);
+            updateUI();
+            saveState();
+        }
+    }
+
+    elMascotBtn.addEventListener('touchstart', e => { e.preventDefault(); handleTap(e); }, { passive: false });
+    elMascotBtn.addEventListener('mousedown', e => handleTap(e));
+
+    function showFloatingText(x, y, text) {
+        const el = document.createElement('div');
+        el.className = 'floating-text';
+        el.innerText = text;
+        el.style.left = (x - 20) + 'px';
+        el.style.top  = (y - 40) + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    // Energy regen - 1/sec base, 2/sec Verified, 3/sec VIP
+    setInterval(() => {
+        if (state.energy < state.maxEnergy) {
+            let rate = 1;
+            if (state.vipMember) rate = 3;
+            else if (state.verifiedPlayer) rate = 2;
+            if (state.activeBoosters.energy2x && state.activeBoosters.energy2x > Date.now()) rate *= 2;
+            if (state.activeBoosters.infiniteEnergy && state.activeBoosters.infiniteEnergy > Date.now()) rate = 999;
+            state.energy = Math.min(state.maxEnergy, state.energy + rate);
+            document.getElementById('energy-bar').style.width = (state.energy / state.maxEnergy * 100) + '%';
+            document.getElementById('energy-val').innerText = Math.floor(state.energy);
+        }
+    }, 1000);
+
+    // When app becomes visible again - calculate offline energy regen
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            const now = Date.now();
+            const lastSave = state.lastSaveTime || now;
+            const secondsAway = Math.floor((now - lastSave) / 1000);
+            if (secondsAway > 5) {
+                let rate = 1;
+                if (state.vipMember) rate = 3;
+                else if (state.verifiedPlayer) rate = 2;
+                const gained = Math.min(secondsAway * rate, state.maxEnergy);
+                state.energy = Math.min(state.maxEnergy, state.energy + gained);
+                updateUI();
+            }
+            state.lastSaveTime = now;
+            saveState();
+            syncUserToSupabase();
+        } else {
+            state.lastSaveTime = Date.now();
+            saveState();
+        }
+    });
+
+    // Boost timer display
+    setInterval(() => {
+        const now = Date.now(); let best = 0;
+        for (const k in state.activeBoosters) { if (state.activeBoosters[k] > now) best = Math.max(best, state.activeBoosters[k] - now); }
+        const td = document.getElementById('boost-timer-display');
+        if (best > 0) {
+            const m = Math.floor(best/60000), s = Math.floor((best%60000)/1000);
+            td.style.display = 'block';
+            td.innerText = `⚡ ${translations[state.lang].boostActive}${m}${translations[state.lang].minutes}${s}${translations[state.lang].seconds}`;
+        } else { td.style.display = 'none'; }
+    }, 1000);
+
+    // Daily streak check
+    function checkStreak() {
+        const now = new Date(), last = new Date(state.lastAppOpen);
+        const daysDiff = Math.floor((now - last) / 86400000);
+        if (daysDiff === 1) { state.streakDays = (state.streakDays || 0) + 1; state.tasks.streak.completed = Math.min(state.streakDays, 3); }
+        else if (daysDiff > 1) { state.streakDays = 1; state.tasks.streak.completed = 1; }
+        state.lastAppOpen = Date.now();
+        saveState();
+    }
+
+    // =====================================================================
+    // LEADERBOARD (real Supabase data)
+    // =====================================================================
+    async function updateLeaderboard() {
+        const list = document.getElementById('leaderboard-list');
+        if (!list) return;
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;font-size:14px;">⏳ Loading...</div>';
+
+        let players = await fetchLeaderboard();
+
+        // If no Supabase, insert current user as only entry
+        if (players.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center;padding:24px 16px;">
+                    <div style="font-size:44px;margin-bottom:10px;">🐝</div>
+                    <div style="font-size:15px;color:#00ddb4;font-weight:700;margin-bottom:6px;">Be the first!</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:16px;">Invite friends to fill the leaderboard!</div>
+                    <div style="padding:14px;background:rgba(0,221,180,0.1);border:1px solid rgba(0,221,180,0.3);border-radius:12px;">
+                        <div style="font-size:11px;color:rgba(255,255,255,0.5);">Your position</div>
+                        <div style="font-size:18px;color:#fff;font-weight:700;">${state.username}</div>
+                        <div style="font-size:14px;color:#00ddb4;">${Math.floor(state.balance).toLocaleString()} FUTURE</div>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = '';
+        players.forEach((player, i) => {
+            const isCurrent = player.user_id === state.userId;
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            const verifiedBadge = player.verified_player ? ' <span style="color:#00ff88;font-size:10px;">✅</span>' : '';
+            const vipBadge100 = player.vip_member ? ' <span style="color:#FFD700;font-size:10px;">👑</span>' : '';
+            const card = document.createElement('div');
+            card.className = `leaderboard-item ${isCurrent ? 'current-user' : ''}`;
+            card.innerHTML = `
+                <div class="leaderboard-rank">${medal}</div>
+                <div class="leaderboard-info">
+                    <div class="leaderboard-name">${player.username || 'Player'}${verifiedBadge}${vipBadge100}</div>
+                    <div class="leaderboard-balance">${(player.balance||0).toLocaleString()} FUTURE</div>
+                </div>
+                <div class="leaderboard-level">Lvl ${player.level || 1}</div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    // =====================================================================
+    // TASKS  (daily tasks + referral milestones)
+    // =====================================================================
+    const REFERRAL_MILESTONES = [
+        { friends: 1,   tokens: 500,   title: '1 Friend',    bonus: '', id: 'rm1' },
+        { friends: 5,   tokens: 2000,  title: '5 Friends',   bonus: '🐝 Bee Recruiter title', id: 'rm5' },
+        { friends: 10,  tokens: 5000,  title: '10 Friends',  bonus: '✨ Golden Bee skin', id: 'rm10' },
+        { friends: 30,  tokens: 15000, title: '30 Friends',  bonus: '🎖️ Bee Ambassador title', id: 'rm30' },
+        { friends: 50,  tokens: 30000, title: '50 Friends',  bonus: '🌌 Galaxy Bee skin', id: 'rm50' },
+        { friends: 100, tokens: 100000,title: '100 Friends', bonus: '👑 VIP FOREVER', id: 'rm100' },
+    ];
+
+    function updateTasksUI() {
+        const list = document.getElementById('tasks-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        // Daily tasks header
+        const dh = document.createElement('div');
+        dh.className = 'task-section-title';
+        dh.innerText = '📋 DAILY TASKS';
+        list.appendChild(dh);
+
+        const tasks = [
+            { id:'tap', title: 'Tap 500 times today', reward: 200, progress: state.tasks.tap.completed, target: 500 },
+            { id:'invite', title: 'Invite 1 friend', reward: 500, progress: state.tasks.invite.completed, target: 1 },
+            { id:'streak', title: 'Open app 3 days in a row', reward: 1000, progress: state.tasks.streak.completed, target: 3 }
+        ];
+
+        tasks.forEach(task => {
+            const done = task.progress >= task.target;
+            const pct = Math.min((task.progress / task.target) * 100, 100);
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.innerHTML = `
+                <div class="task-info">
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-reward">+${task.reward} FUTURE</div>
+                    <div class="task-progress"><div class="task-progress-bar" style="width:${pct}%"></div></div>
+                    <div style="font-size:11px;color:#aaa;margin-top:4px;">${task.progress}/${task.target}</div>
+                </div>
+                <button class="task-claim-btn" ${!done ? 'disabled' : ''} onclick="claimTask('${task.id}',${task.reward})">
+                    ${done ? translations[state.lang].claim : '🔒'}
+                </button>`;
+            list.appendChild(item);
+        });
+
+        // Referral milestones section
+        const mh = document.createElement('div');
+        mh.className = 'task-section-title';
+        mh.style.color = '#FFD700';
+        mh.innerText = '🎖️ REFERRAL MILESTONES';
+        list.appendChild(mh);
+
+        const refCount = state.referralCount || 0;
+        REFERRAL_MILESTONES.forEach(m => {
+            const claimed = (state.milestonesClaimed || []).includes(m.id);
+            const available = refCount >= m.friends && !claimed;
+            const item = document.createElement('div');
+            item.className = `milestone-item ${claimed ? 'claimed' : available ? 'available' : ''}`;
+            item.innerHTML = `
+                <div class="milestone-info">
+                    <div class="milestone-title">${m.friends === 1 ? '1 friend' : m.friends + ' friends'} → +${m.tokens.toLocaleString()} FUTURE</div>
+                    ${m.bonus ? `<div class="milestone-reward">🎁 ${m.bonus}</div>` : ''}
+                    <div style="font-size:11px;color:#aaa;margin-top:3px;">${refCount}/${m.friends} friends</div>
+                </div>
+                <button class="milestone-claim-btn" ${(!available) ? 'disabled' : ''} onclick="claimMilestone('${m.id}',${m.tokens},'${m.bonus}')">
+                    ${claimed ? '✅' : available ? 'Claim!' : '🔒'}
+                </button>`;
+            list.appendChild(item);
+        });
+        // Social tasks section
+        const sh = document.createElement('div');
+        sh.className = 'task-section-title';
+        sh.style.color = '#1DA1F2';
+        sh.innerText = '🌐 SOCIAL TASKS';
+        list.appendChild(sh);
+
+        const socialTasks = [
+            { id:'st_twitter', icon:'🐦', title: 'Follow @Futuresystem999 on X (Twitter)', reward: 1100, url: 'https://x.com/Futuresystem999' },
+            { id:'st_instagram', icon:'📸', title: 'Follow Crystal Bee on Instagram', reward: 1100, url: 'https://instagram.com/futureecosystem' },
+            { id:'st_facebook', icon:'👍', title: 'Like Crystal Bee Facebook page', reward: 1000, url: 'https://www.facebook.com/share/1C26VneLKJ/' },
+            { id:'st_tgchannel', icon:'📢', title: 'Join FUTURE Telegram channel', reward: 600, url: 'https://t.me/FutureEcoSystemBot' },
+            { id:'st_share', icon:'📤', title: 'Share game in Telegram', reward: 800, url: null },
+        ];
+
+        if (!state.socialTasksClaimed) state.socialTasksClaimed = [];
+
+        if (!state.socialTasksClicked) state.socialTasksClicked = {};
+
+        socialTasks.forEach(task => {
+            const claimed = state.socialTasksClaimed.includes(task.id);
+            const clickedAt = state.socialTasksClicked[task.id] || 0;
+            const secondsWaited = Math.floor((Date.now() - clickedAt) / 1000);
+            const canClaim = clickedAt > 0 && secondsWaited >= 30;
+            const waitLeft = canClaim ? 0 : Math.max(0, 30 - secondsWaited);
+
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.id = 'social-task-' + task.id;
+            item.style.opacity = claimed ? '0.6' : '1';
+            item.innerHTML =
+                '<div class="task-info" style="display:flex;align-items:center;gap:10px;">' +
+                    '<div style="font-size:22px;">' + task.icon + '</div>' +
+                    '<div>' +
+                        '<div class="task-title">' + task.title + '</div>' +
+                        '<div class="task-reward">+' + task.reward.toLocaleString() + ' FUTURE</div>' +
+                        (clickedAt > 0 && !claimed && !canClaim ? '<div style="font-size:11px;color:#FFD700;margin-top:3px;" id="timer-' + task.id + '">⏳ Wait ' + waitLeft + 's...</div>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:5px;margin-left:8px;">' +
+                    (!claimed && task.url ? '<a href="' + task.url + '" target="_blank" onclick="socialTaskClicked('' + task.id + '')" style="display:block;padding:7px 10px;background:rgba(29,161,242,0.2);border:1px solid rgba(29,161,242,0.4);border-radius:8px;color:#1DA1F2;font-size:11px;font-weight:700;text-decoration:none;text-align:center;white-space:nowrap;">Go ↗</a>' : '') +
+                    '<button class="task-claim-btn" ' + (claimed || !canClaim ? 'disabled' : '') + ' id="claimBtn-' + task.id + '" onclick="claimSocialTask('' + task.id + '',' + task.reward + ')">' +
+                        (claimed ? '✅' : canClaim ? 'Claim! 🎁' : '🔒') +
+                    '</button>' +
+                '</div>';
+            list.appendChild(item);
+        });
+    }
+
+    function socialTaskClicked(taskId) {
+        if (!state.socialTasksClicked) state.socialTasksClicked = {};
+        if (!state.socialTasksClicked[taskId]) {
+            state.socialTasksClicked[taskId] = Date.now();
+            saveState();
+            // Start countdown timer
+            let secs = 30;
+            const timer = setInterval(() => {
+                secs--;
+                const timerEl = document.getElementById('timer-' + taskId);
+                const claimBtn = document.getElementById('claimBtn-' + taskId);
+                if (timerEl) timerEl.innerText = secs > 0 ? '⏳ Wait ' + secs + 's...' : '✅ Ready to claim!';
+                if (secs <= 0) {
+                    clearInterval(timer);
+                    if (timerEl) timerEl.style.color = '#00ddb4';
+                    if (claimBtn) { claimBtn.disabled = false; claimBtn.innerText = 'Claim! 🎁'; }
+                }
+            }, 1000);
+        }
+    }
+
+    function claimSocialTask(taskId, reward) {
+        if (!state.socialTasksClaimed) state.socialTasksClaimed = [];
+        if (state.socialTasksClaimed.includes(taskId)) return;
+        if (!state.socialTasksClicked || !state.socialTasksClicked[taskId]) {
+            showAlert('⚠️ First tap "Go ↗" to visit the page!');
+            return;
+        }
+        const waited = Math.floor((Date.now() - state.socialTasksClicked[taskId]) / 1000);
+        if (waited < 30) {
+            showAlert('⏳ Wait ' + (30 - waited) + ' more seconds!');
+            return;
+        }
+        state.socialTasksClaimed.push(taskId);
+        state.balance += reward;
+        updateUI(); updateTasksUI(); saveState();
+        showAlert('✅ +' + reward.toLocaleString() + ' FUTURE! 🎉');
+    }
+
+    function claimTask(taskId, reward) {
+        state.balance += reward;
+        if (taskId === 'tap') state.tasks.tap.completed = 0;
+        else if (taskId === 'invite') state.tasks.invite.completed = 0;
+        else if (taskId === 'streak') state.tasks.streak.completed = 0;
+        updateUI(); updateTasksUI(); saveState();
+    }
+
+    function claimMilestone(id, tokens, bonus) {
+        if (!state.milestonesClaimed) state.milestonesClaimed = [];
+        if (state.milestonesClaimed.includes(id)) return;
+        state.milestonesClaimed.push(id);
+        state.balance += tokens;
+        // Apply bonuses
+        if (bonus.includes('Golden Bee')) { state.cosmetic = 'goldenBee'; applyCosmetic('goldenBee'); }
+        if (bonus.includes('Galaxy Bee')) { state.cosmetic = 'galaxyBee'; applyCosmetic('galaxyBee'); }
+        if (bonus.includes('VIP FOREVER')) { state.vipMember = true; }
+        updateUI(); updateTasksUI(); saveState();
+        showAlert(`🎉 Milestone claimed! +${tokens.toLocaleString()} FUTURE${bonus ? '\n🎁 ' + bonus : ''}`);
+    }
+
+    // =====================================================================
+    // SHOP
+    // =====================================================================
+    const shopItems = {
+        boosts: [
+            { id:'energy2x',      name:'energyX2',      desc:'energyX2Desc',      price:1,   duration:3600,  icon:'⚡' },
+            { id:'coins3x',       name:'coinsX3',       desc:'coinsX3Desc',       price:2,   duration:3600,  icon:'💰' },
+            { id:'infiniteEnergy',name:'infiniteEnergy',desc:'infiniteEnergyDesc',price:0.5, duration:1800,  icon:'♾️' },
+            { id:'megaTap',       name:'megaTap',       desc:'megaTapDesc',       price:3,   duration:900,   icon:'🔥' }
+        ],
+        cosmetics: [
+            { id:'goldenBee',   name:'goldenBee',   desc:'goldenBeeDesc',   price:3, icon:'✨', beeClass:'bee-golden' },
+            { id:'rainbowBee',  name:'rainbowBee',  desc:'rainbowBeeDesc',  price:2, icon:'🌈', beeClass:'bee-rainbow' },
+            { id:'galaxyBee',   name:'galaxyBee',   desc:'galaxyBeeDesc',   price:5, icon:'🌌', beeClass:'bee-galaxy' },
+            { id:'diamondWings',name:'diamondWings',desc:'diamondWingsDesc',price:2, icon:'💎' }
+        ],
+        verified: [
+            { id:'verifiedPlayer', name:'verifiedPlayer', desc:'verifiedPlayerDesc', price:2.5, icon:'✅', type:'verified' }
+        ],
+        vip: [
+            { id:'crystalVip', name:'crystalVip', desc:'crystalVipDesc', price:10, duration:'monthly', icon:'👑', type:'vip' }
+        ]
+    };
+
+    function updateShopUI() {
+        renderShopSection('boosts-list', shopItems.boosts, 'boost');
+        renderShopSection('cosmetics-list', shopItems.cosmetics, 'cosmetic');
+        renderShopSection('verified-list', shopItems.verified, 'verified');
+        renderShopSection('vip-list', shopItems.vip, 'vip');
+    }
+
+    function renderShopSection(elId, items, type) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.innerHTML = '';
+        items.forEach(item => el.appendChild(createShopCard(item, type)));
+    }
+
+    function createShopCard(item, type) {
+        const card = document.createElement('div');
+        const typeClass = type === 'vip' ? 'vip' : type === 'verified' ? 'verified' : '';
+        card.className = `shop-item ${typeClass}`;
+        const t = translations[state.lang];
+        const name = t[item.name] || item.name;
+        const desc = t[item.desc] || item.desc;
+        const priceStr = item.duration === 'monthly' ? `${item.price} TON/mo` : `${item.price} TON`;
+        card.innerHTML = `
+            <div style="display:flex;align-items:flex-start;flex:1;">
+                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-info">
+                    <div class="shop-item-name">${name}</div>
+                    <div class="shop-item-desc">${desc}</div>
+                </div>
+            </div>
+            <div class="shop-item-price">
+                <div class="shop-item-price-value">${priceStr}</div>
+                <button class="shop-buy-btn" onclick="buyShopItem('${item.id}','${type}')">${t.buy}</button>
+            </div>`;
+        return card;
+    }
+
+    function buyShopItem(itemId, type) {
+        const all = [...shopItems.boosts, ...shopItems.cosmetics, ...shopItems.verified, ...shopItems.vip];
+        const item = all.find(i => i.id === itemId);
+        if (item) processTONPayment(itemId, item.price, type);
+    }
+
+    async function processTONPayment(itemId, amount, itemType) {
+        try {
+            if (!window._tc) { showAlert('Connect a TON wallet first!'); return; }
+            if (!window._tc.account) { showAlert('Connect a TON wallet first!'); return; }
+            showProcessingPopup();
+            const tx = {
+                validUntil: Math.floor(Date.now()/1000) + 600,
+                messages: [{ address: OWNER_WALLET, amount: Math.floor(amount * 1e9).toString() }]
+            };
+            const result = await window._tc.sendTransaction(tx);
+            if (result) {
+                activateShopItem(itemId, itemType);
+                closePopups();
+                showAlert('✅ Payment successful! Item activated!');
+                saveState();
+            } else { closePopups(); }
+        } catch(e) { closePopups(); showAlert('Payment failed: ' + e.message); }
+    }
+
+    function activateShopItem(itemId, itemType) {
+        if (itemType === 'boost') {
+            const item = shopItems.boosts.find(b => b.id === itemId);
+            if (item) { state.activeBoosters[itemId] = Date.now() + (item.duration * 1000); }
+        } else if (itemType === 'cosmetic') {
+            applyCosmetic(itemId);
+        } else if (itemType === 'vip') {
+            state.vipMember = true;
+        } else if (itemType === 'verified') {
+            state.verifiedPlayer = true;
+            if (supabaseClient) syncUserToSupabase();
+        }
+        updateUI(); updateShopUI();
+    }
+
+    function applyCosmetic(id) {
+        const bee = document.getElementById('crystal-bee');
+        if (bee) {
+            bee.classList.remove('bee-golden','bee-rainbow','bee-galaxy');
+            const item = shopItems.cosmetics.find(c => c.id === id);
+            if (item && item.beeClass) bee.classList.add(item.beeClass);
+        }
+        state.cosmetic = id; saveState();
+    }
+
+    function updateBeeLevel() {
+        if (state.cosmetic) return; // cosmetic overrides level style
+        const bee = document.getElementById('crystal-bee');
+        if (!bee) return;
+        // Remove old level classes
+        for (let i = 1; i <= 20; i++) bee.classList.remove('bee-lv' + i);
+        const li = getLevelIndex();
+        bee.classList.add('bee-lv' + (li + 1));
+    }
+
+    // =====================================================================
+    // WALLET (4 wallets, single TonConnect modal)
+    // =====================================================================
+    const wallets = [
+        { id:'tonkeeper',   name:'Tonkeeper',    icon:'💎', desc:'The most popular TON wallet' },
+        { id:'tgwallet',    name:'TG Wallet',    icon:'📱', desc:'Built into Telegram app' },
+        { id:'trustwallet', name:'Trust Wallet', icon:'🛡️', desc:'Multi-chain wallet with TON support' },
+        { id:'mytonwallet', name:'MyTonWallet',  icon:'🔐', desc:'Feature-rich TON wallet' }
+    ];
+
+    function updateWalletUI() {
+        const statusEl = document.getElementById('wallet-status');
+        const listEl   = document.getElementById('wallet-list');
+        if (!statusEl || !listEl) return;
+
+        if (state.connectedWallet) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = `
+                <div class="wallet-status-connected">
+                    <div class="wallet-status-dot"></div>
+                    <div>
+                        <div class="wallet-status-text">✅ ${state.connectedWallet} Connected</div>
+                        ${state.walletAddressShort ? `<div style="font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;">${state.walletAddressShort}</div>` : ''}
+                    </div>
+                    <button class="disconnect-btn" style="margin-left:auto;" onclick="disconnectWallet()">Disconnect</button>
+                </div>`;
+        } else {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = `<div class="wallet-status-text">Connect a wallet to enable TON payments & withdrawals</div>`;
+        }
+
+        listEl.innerHTML = '';
+        wallets.forEach(w => {
+            const isConn = state.connectedWallet === w.name;
+            const card = document.createElement('div');
+            card.className = `wallet-card ${isConn ? 'connected' : ''}`;
+            card.innerHTML = `
+                <div class="wallet-info">
+                    <div class="wallet-icon">${w.icon}</div>
+                    <div class="wallet-details">
+                        <div class="wallet-name">${w.name}</div>
+                        <div class="wallet-benefits">${w.desc}<br><span style="color:#00ddb4;font-size:10px;">Withdraw FUTURE · Receive airdrop</span></div>
+                    </div>
+                </div>
+                <div class="wallet-action">
+                    ${isConn
+                        ? `<button class="disconnect-btn" onclick="disconnectWallet()">${translations[state.lang].disconnect}</button>`
+                        : `<button class="connect-btn" onclick="connectWallet('${w.name}')">${translations[state.lang].connectWallet}</button>`
+                    }
+                </div>`;
+            listEl.appendChild(card);
+        });
+    }
+
+
+
+    function updateHeaderWithWallet() {
+        const hl = document.querySelector('.header-left');
+        if (!hl) return;
+        let ind = hl.querySelector('.wallet-indicator');
+        if (state.connectedWallet) {
+            if (!ind) { ind = document.createElement('div'); ind.className = 'wallet-indicator'; hl.appendChild(ind); }
+            ind.innerHTML = `<div style="color:#00ddb4;font-size:10px;display:flex;align-items:center;gap:4px;"><span style="color:#00ff00;">●</span>${state.connectedWallet}</div>${state.walletAddressShort ? `<div style="color:#aaa;font-family:monospace;font-size:9px;">${state.walletAddressShort}</div>` : ''}`;
+        } else if (ind) { ind.remove(); }
+    }
+
+    // =====================================================================
+    // VIP SYSTEM
+    // =====================================================================
+    function checkVIP100() {
+        if ((state.referralCount || 0) >= 100 && !state.vipMember) {
+            state.vipMember = true;
+            saveState();
+        }
+    }
+
+    function checkAndAwardVIPBonus() {
+        if (!state.vipMember) return;
+        const today = new Date().toDateString();
+        if (state.lastVipBonus === today) return;
+        state.lastVipBonus = today;
+        state.balance += 500;
+        saveState();
+    }
+
+    function updateVIPBadge() {
+        const hl = document.querySelector('.header-left');
+        if (!hl) return;
+        let badge = hl.querySelector('.vip-badge');
+        if (state.vipMember) {
+            if (!badge) { badge = document.createElement('span'); badge.className = 'vip-badge'; hl.appendChild(badge); }
+            badge.textContent = translations[state.lang].vipBadge;
+        } else if (badge) { badge.remove(); }
+    }
+
+    // =====================================================================
+    // PROFILE POPUP
+    // =====================================================================
+    const ACHIEVEMENTS = [
+        { id:'a1', icon:'🌱', label:'First Tap',        check: () => state.totalTaps >= 1 },
+        { id:'a2', icon:'🔥', label:'100 Taps',         check: () => state.totalTaps >= 100 },
+        { id:'a3', icon:'⚡', label:'500 Taps',         check: () => state.totalTaps >= 500 },
+        { id:'a4', icon:'💎', label:'1K Taps',          check: () => state.totalTaps >= 1000 },
+        { id:'a5', icon:'🐝', label:'1st Referral',     check: () => state.referralCount >= 1 },
+        { id:'a6', icon:'👑', label:'5 Referrals',      check: () => state.referralCount >= 5 },
+        { id:'a7', icon:'💰', label:'1K FUTURE',        check: () => state.balance >= 1000 },
+        { id:'a8', icon:'🌟', label:'10K FUTURE',       check: () => state.balance >= 10000 },
+        { id:'a9', icon:'🏆', label:'Wallet Connected', check: () => !!state.connectedWallet },
+        { id:'a10',icon:'🌈', label:'Verified Player',  check: () => state.verifiedPlayer }
+    ];
+
+    document.getElementById('footer-profile').addEventListener('click', showProfilePopup);
+
+    function showProfilePopup() {
+        // Remove any existing profile popup
+        document.getElementById('profile-overlay')?.remove();
+        document.getElementById('profile-box')?.remove();
+
+        const li = getLevelIndex();
+        const t = translations[state.lang];
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.id = 'profile-overlay';
+        const box = document.createElement('div');
+        box.className = 'popup-box';
+        box.id = 'profile-box';
+
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) closeProfilePopup();
+        });
+
+        const achHtml = ACHIEVEMENTS.map(a => {
+            const unlocked = a.check();
+            return `<div class="achievement-item ${unlocked ? 'unlocked' : 'locked'}">
+                <div class="achievement-icon">${a.icon}</div>
+                <div class="achievement-label">${a.label}</div>
+            </div>`;
+        }).join('');
+
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div class="popup-title" style="margin:0;">👤 ${state.username}</div>
+                <button onclick="closeProfilePopup()"
+                    style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+
+            <div class="profile-section">
+                <div style="font-size:12px;font-weight:700;color:#00ddb4;margin-bottom:8px;">📊 STATS</div>
+                <div class="profile-stat-row"><span>Level</span><span class="profile-stat-val">${t.levels[li]}</span></div>
+                <div class="profile-stat-row"><span>FUTURE</span><span class="profile-stat-val">${Math.floor(state.balance).toLocaleString()}</span></div>
+                <div class="profile-stat-row"><span>Total Taps</span><span class="profile-stat-val">${state.totalTaps.toLocaleString()}</span></div>
+                <div class="profile-stat-row"><span>Streak</span><span class="profile-stat-val">${state.streakDays || 0} days 🔥</span></div>
+                <div class="profile-stat-row"><span>Friends</span><span class="profile-stat-val">${state.referralCount || 0}</span></div>
+                ${state.verifiedPlayer ? '<div class="profile-stat-row"><span>Status</span><span class="profile-stat-val">✅ Verified</span></div>' : ''}
+                ${state.vipMember ? '<div class="profile-stat-row"><span>VIP</span><span class="profile-stat-val">👑 Active</span></div>' : ''}
+            </div>
+
+            <div class="profile-section">
+                <div style="font-size:12px;font-weight:700;color:#FFD700;margin-bottom:8px;">🔗 REFERRAL CODE</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:8px;">Share your code — earn +500 FUTURE per friend!</div>
+                <div class="ref-copy-row">
+                    <div class="ref-code-box">${state.referralCode || 'N/A'}</div>
+                    <button class="copy-btn" onclick="copyRefCode()">📋 Copy</button>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:10px;">🏅 ACHIEVEMENTS (${ACHIEVEMENTS.filter(a=>a.check()).length}/10)</div>
+                <div class="achievement-grid">${achHtml}</div>
+            </div>
+
+            <button onclick="closeProfilePopup()" style="width:100%;margin-top:10px;padding:11px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:#aaa;font-size:13px;cursor:pointer;">Close ✕</button>
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(box);
+    }
+
+    function closeProfilePopup() {
+        document.getElementById('profile-overlay')?.remove();
+        document.getElementById('profile-box')?.remove();
+    }
+
+    function copyRefCode() {
+        const code = state.referralCode || '';
+        const msg = `🐝 Join FUTURE-eco-system! Use my code: ${code} and get 500 FREE tokens! https://t.me/FutureEcoSystemBot`;
+        navigator.clipboard?.writeText(msg).then(() => showAlert('✅ Referral link copied!')).catch(() => showAlert('Code: ' + code));
+    }
+
+    // =====================================================================
+    // POPUPS (generic)
+    // =====================================================================
+    function showAlert(msg) {
+        const overlay = document.createElement('div'); overlay.className = 'popup-overlay';
+        const box = document.createElement('div'); box.className = 'popup-box';
+        box.innerHTML = `<div style="font-size:36px;margin-bottom:10px;">ℹ️</div><div class="popup-title">${msg}</div>`;
+        document.body.appendChild(overlay); document.body.appendChild(box);
+        setTimeout(() => { overlay.remove(); box.remove(); }, 2500);
+    }
+
+    function showProcessingPopup() {
+        const overlay = document.createElement('div'); overlay.className = 'popup-overlay'; overlay.id = 'proc-overlay';
+        const box = document.createElement('div'); box.className = 'popup-box'; box.id = 'proc-box';
+        box.innerHTML = `<div class="spinner"></div><div class="popup-title">Processing...</div><div class="popup-msg">Confirm in your wallet</div>`;
+        document.body.appendChild(overlay); document.body.appendChild(box);
+    }
+
+    function closePopups() {
+        document.getElementById('proc-overlay')?.remove();
+        document.getElementById('proc-box')?.remove();
+    }
+
+    // =====================================================================
+    // TONCONNECT (single, clean implementation)
+    // =====================================================================
+    // =====================================================================
+    // TONCONNECT - simple & clean
+    // =====================================================================
+    let tonConnectUI = null;
+
+    async function initTonConnect() {
+        try {
+            const TC = window.TonConnectUI
+                     || window.TON_CONNECT_UI?.TonConnectUI
+                     || window.TON_CONNECT_UI;
+
+            if (!TC || typeof TC !== 'function') {
+                setTimeout(initTonConnect, 1500);
+                return;
+            }
+
+            tonConnectUI = new TC({
+                manifestUrl: MANIFEST_URL,
+                uiPreferences: { theme: 'DARK' }
+            });
+
+            tonConnectUI.onStatusChange(wallet => {
+                if (wallet) {
+                    const addr = wallet.account.address;
+                    const short = addr.substring(0,6) + '...' + addr.substring(addr.length-4);
+                    state.connectedWallet = wallet.device?.appName || 'TON Wallet';
+                    state.walletAddress = addr;
+                    state.walletAddressShort = short;
+                    saveState(); updateWalletUI(); updateHeaderWithWallet();
+                    showAlert('✅ ' + (wallet.device?.appName || 'Wallet') + ' connected!');
+                } else {
+                    state.connectedWallet = null;
+                    state.walletAddress = null;
+                    state.walletAddressShort = null;
+                    saveState(); updateWalletUI(); updateHeaderWithWallet();
+                }
+            });
+            console.log('✅ TonConnect ready');
+        } catch(e) {
+            console.error('TonConnect init error:', e.message);
+            setTimeout(initTonConnect, 3000);
+        }
+    }
+
+    async function connectWallet(walletName) {
+        const appNames = {'Tonkeeper':'tonkeeper','TG Wallet':'telegram-wallet','Trust Wallet':'trust_wallet_ton','MyTonWallet':'mytonwallet'};
+        const universalLinks = {'Tonkeeper':'https://app.tonkeeper.com/ton-connect','TG Wallet':'https://t.me/wallet','Trust Wallet':'https://link.trustwallet.com/ton-connect','MyTonWallet':'https://mytonwallet.io/ton-connect'};
+
+        if (!tonConnectUI) {
+            await initTonConnect();
+            await new Promise(r => setTimeout(r, 800));
+        }
+
+        // Method 1: openSingleWalletModal
+        if (tonConnectUI) {
+            try {
+                await tonConnectUI.openSingleWalletModal(appNames[walletName] || 'tonkeeper');
+                return;
+            } catch(e) { console.log('M1:', e.message); }
+
+            // Method 2: openModal
+            try {
+                await tonConnectUI.openModal();
+                return;
+            } catch(e) { console.log('M2:', e.message); }
+        }
+
+        // Method 3: Telegram.WebApp.openLink
+        try {
+            const baseUrl = universalLinks[walletName] || universalLinks['Tonkeeper'];
+            const payload = encodeURIComponent(JSON.stringify({manifestUrl: MANIFEST_URL, items:[{name:'ton_addr'}]}));
+            const url = baseUrl + '?v=2&id=' + Date.now() + '&r=' + payload;
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(url, {try_instant_view: false});
+            } else {
+                window.open(url, '_blank');
+            }
+        } catch(e) { console.log('M3:', e.message); showAlert('Wallet error: ' + e.message); }
+    }
+
+    function disconnectWallet() {
+        try { if (tonConnectUI) tonConnectUI.disconnect(); } catch(e) {}
+        state.connectedWallet = null;
+        state.walletAddress = null;
+        state.walletAddressShort = null;
+        state.walletBalance = null;
+        saveState(); updateWalletUI(); updateHeaderWithWallet();
+    }
+
+    // =====================================================================
+    // SPIN SCREEN
+    // =====================================================================
+    const spinPrizes = [
+        { label:'+500',  value:500,  type:'tokens', color:'#00ddb4', prob:20 },
+        { label:'+200',  value:200,  type:'tokens', color:'#7c3aed', prob:25 },
+        { label:'+1000', value:1000, type:'tokens', color:'#FFD700', prob:10 },
+        { label:'+100',  value:100,  type:'tokens', color:'#00ddb4', prob:25 },
+        { label:'⚡ Energy', value:500, type:'energy', color:'#00ff88', prob:10 },
+        { label:'+50',   value:50,   type:'tokens', color:'#888',   prob:5  },
+        { label:'+2000', value:2000, type:'tokens', color:'#ff6b35', prob:3 },
+        { label:'💎 5000',value:5000,type:'tokens', color:'#ff0080', prob:2 },
+    ];
+
+    function canSpin() {
+        const spinsPerDay = state.verifiedPlayer ? 3 : state.vipMember ? 2 : 1;
+        if (!state.spinData) return true;
+        const today = new Date().toDateString();
+        const d = state.spinData;
+        if (d.date !== today) return true;
+        return (d.count || 0) < spinsPerDay;
+    }
+
+    function spinsLeft() {
+        const max = state.verifiedPlayer ? 3 : state.vipMember ? 2 : 1;
+        if (!state.spinData) return max;
+        const today = new Date().toDateString();
+        if (state.spinData.date !== today) return max;
+        return Math.max(0, max - (state.spinData.count || 0));
+    }
+
+    function drawSpinWheel(rotation) {
+        const canvas = document.getElementById('spinCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const cx = 120, cy = 120, r = 110;
+        const total = spinPrizes.reduce((a,b) => a + b.prob, 0);
+        let angle = rotation * Math.PI / 180;
+        ctx.clearRect(0,0,240,240);
+        spinPrizes.forEach(p => {
+            const slice = (p.prob / total) * 2 * Math.PI;
+            ctx.beginPath(); ctx.moveTo(cx,cy);
+            ctx.arc(cx,cy,r,angle,angle+slice); ctx.closePath();
+            ctx.fillStyle = p.color + '33'; ctx.fill();
+            ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.stroke();
+            ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle + slice/2);
+            ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif'; ctx.fillText(p.label, r-8, 4);
+            ctx.restore();
+            angle += slice;
+        });
+    }
+
+    function initSpinScreen() {
+        drawSpinWheel(0);
+        const btn = document.getElementById('spin-btn');
+        const status = document.getElementById('spin-status');
+        const left = spinsLeft();
+        if (left === 0) {
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.textContent = '⏳ Come back tomorrow!'; }
+            const next = new Date(); next.setDate(next.getDate()+1); next.setHours(0,0,0,0);
+            const diff = next - Date.now();
+            const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+            if (status) status.innerHTML = `Next spin in: <b style="color:#FFD700">${h}h ${m}m</b>`;
+        } else {
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = `🎰 SPIN! (${left} left)`; }
+            if (status) status.textContent = left + ' spin(s) ready!';
+        }
+        loadWeeklyTop10();
+    }
+
+    let spinAnimating = false;
+    function doSpin() {
+        if (spinAnimating || spinsLeft() === 0) return;
+        spinAnimating = true;
+        const btn = document.getElementById('spin-btn');
+        if (btn) btn.disabled = true;
+        const total = spinPrizes.reduce((a,b) => a + b.prob, 0);
+        let rand = Math.random() * total, winner = spinPrizes[0], cumAngle = 0, cumProb = 0;
+        for (let i = 0; i < spinPrizes.length; i++) {
+            cumProb += spinPrizes[i].prob;
+            if (rand <= cumProb) { winner = spinPrizes[i]; break; }
+            cumAngle += (spinPrizes[i].prob/total)*360;
+        }
+        const winnerAngle = cumAngle + (winner.prob/total)*180;
+        const targetRot = 360*6 + (360 - winnerAngle);
+        let current = 0;
+        const duration = 4000, start = Date.now();
+        function animate() {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed/duration, 1);
+            const ease = 1 - Math.pow(1-progress, 4);
+            current = targetRot * ease;
+            drawSpinWheel(current % 360);
+            if (progress < 1) { requestAnimationFrame(animate); }
+            else {
+                spinAnimating = false;
+                // Record spin
+                const today = new Date().toDateString();
+                if (!state.spinData || state.spinData.date !== today) state.spinData = {date:today, count:0};
+                state.spinData.count++;
+                if (winner.type === 'tokens') state.balance += winner.value;
+                else if (winner.type === 'energy') state.energy = state.maxEnergy;
+                saveState(); updateUI();
+                const ov = document.createElement('div'); ov.className = 'popup-overlay';
+                const bx = document.createElement('div'); bx.className = 'popup-box';
+                bx.innerHTML = `<div style="font-size:50px;margin-bottom:10px;">🎉</div>
+                    <div style="font-size:17px;font-weight:700;color:${winner.color};margin-bottom:6px;">You Won!</div>
+                    <div style="font-size:34px;font-weight:900;color:${winner.color};margin-bottom:18px;">${winner.label}</div>
+                    <button onclick="this.closest('.popup-box').remove();this.closest('.popup-overlay').remove();initSpinScreen();"
+                        style="width:100%;padding:12px;background:${winner.color};border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;cursor:pointer;">Awesome! 🐝</button>`;
+                document.body.appendChild(ov); document.body.appendChild(bx);
+                ov.addEventListener('click', e => { if(e.target===ov){ov.remove();bx.remove();initSpinScreen();} });
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
+    async function sendGift() {
+        const code = document.getElementById('gift-code')?.value.trim().toUpperCase();
+        const amount = parseInt(document.getElementById('gift-amount')?.value);
+        if (!code || !amount || amount < 50) { showAlert('Enter a valid code and amount (min 50)!'); return; }
+        if (amount > state.balance) { showAlert('Not enough FUTURE tokens!'); return; }
+        if (code === state.referralCode) { showAlert('Cannot gift to yourself!'); return; }
+        if (!supabaseClient) { showAlert('Supabase not configured!'); return; }
+        try {
+            const { data, error } = await supabaseClient.from('users').select('user_id, username, balance').eq('referral_code', code).single();
+            if (error || !data) { showAlert('User not found!'); return; }
+            state.balance -= amount;
+            await supabaseClient.from('users').update({ balance: (data.balance||0) + amount }).eq('user_id', data.user_id);
+            saveState(); updateUI();
+            document.getElementById('gift-code').value = '';
+            document.getElementById('gift-amount').value = '';
+            showAlert(`✅ Sent ${amount} FUTURE to ${data.username||code}! 🎁`);
+        } catch(e) { showAlert('Error: ' + e.message); }
+    }
+
+    async function loadWeeklyTop10() {
+        const list = document.getElementById('weekly-top10');
+        if (!list) return;
+        if (!supabaseClient) { list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">Connect Supabase to see rankings</div>'; return; }
+        try {
+            const { data } = await supabaseClient.from('users').select('username, balance').order('balance', { ascending: false }).limit(10);
+            if (!data || data.length === 0) { list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">No players yet!</div>'; return; }
+            const prizes = [5000,3000,1000,500,300,200,150,100,75,50];
+            list.innerHTML = data.map((p,i) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:15px;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.'}</span>
+                        <span style="font-size:13px;color:#fff;">${p.username||'Player'}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px;color:#00ddb4;">${(p.balance||0).toLocaleString()}</div>
+                        <div style="font-size:10px;color:#FFD700;">+${prizes[i] || 0} 🏆</div>
+                    </div>
+                </div>`).join('');
+        } catch(e) { list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">Error loading</div>'; }
+    }
+
+    // =====================================================================
+    // REFERRAL POPUP (first launch)
+    // =====================================================================
+    function showReferralPopup() {
+        if (state.referralInputShown || state.referredBy) return;
+        state.referralInputShown = true; saveState();
+        const ov = document.createElement('div'); ov.className = 'popup-overlay';
+        const bx = document.createElement('div'); bx.className = 'popup-box';
+        bx.innerHTML = `
+            <div style="font-size:36px;margin-bottom:10px;">🐝</div>
+            <div class="popup-title">Got a referral code?</div>
+            <div class="popup-msg">Enter code and get +500 FUTURE tokens!</div>
+            <input id="ref-input" type="text" placeholder="Enter 6-char code..." style="width:100%;padding:11px;border-radius:8px;border:1px solid #00ddb4;background:rgba(0,221,180,0.1);color:#fff;font-size:14px;text-align:center;margin:14px 0 10px;outline:none;">
+            <button onclick="applyRefInput()" style="width:100%;padding:11px;background:#00ddb4;border:none;border-radius:8px;color:#000;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:8px;">🎁 Get +500 tokens!</button>
+            <button onclick="this.parentElement.parentElement.remove();this.parentElement.remove();" style="width:100%;padding:9px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">Skip</button>`;
+        document.body.appendChild(ov); document.body.appendChild(bx);
+    }
+
+    async function applyRefInput() {
+        const code = document.getElementById('ref-input')?.value.trim().toUpperCase();
+        if (!code || code.length < 5) { showAlert('Please enter a valid code!'); return; }
+        if (code === state.referralCode) { showAlert('You cannot use your own code!'); return; }
+        state.referredBy = code; state.balance += 500; saveState(); updateUI();
+        document.querySelector('.popup-overlay')?.remove();
+        document.querySelector('.popup-box')?.remove();
+        showAlert('✅ Code applied! +500 FUTURE tokens! 🎉');
+        awardReferrerBonus(code);
+    }
+
+    // =====================================================================
+    // FOOTER INVITE
+    // =====================================================================
+    document.getElementById('footer-invite').addEventListener('click', () => {
+        const code = state.referralCode || 'FUTURE';
+        const text = encodeURIComponent(`🐝 Join FUTURE-eco-system! Use my code: ${code} — get 500 FREE tokens! 💎`);
+        const url  = encodeURIComponent('https://t.me/FutureEcoSystemBot');
+        const link = `https://t.me/share/url?url=${url}&text=${text}`;
+        if (tg?.openTelegramLink) tg.openTelegramLink(link);
+        else window.open(link, '_blank');
+    });
+
+    document.getElementById('lang-switcher').addEventListener('change', e => {
+        state.lang = e.target.value; updateUI(); saveState();
+    });
+
+    // =====================================================================
+    // INIT
+    // =====================================================================
+    window.addEventListener('load', () => {
+        // Init Supabase
+        initSupabase();
+
+        // Check referral from URL
+        checkReferralLink();
+
+        // Sync to Supabase
+        syncUserToSupabase();
+
+        // Restore cosmetic
+        if (state.cosmetic) applyCosmetic(state.cosmetic);
+
+        // TonConnect
+        setTimeout(initTonConnect, 800);
+
+        // Check streak
+        checkStreak();
+
+        // Show referral popup on first launch
+        setTimeout(() => {
+            if (!state.referralInputShown && !state.referredBy) showReferralPopup();
+        }, 2500);
+
+        // Initial render
+        updateUI();
+        updateWalletUI();
+    });
+
+    // Auto-sync every 15 seconds
+    setInterval(syncUserToSupabase, 15000);
+
+    </script>
+</body>
+</html>
