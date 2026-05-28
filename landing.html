@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUTURE-eco-system | Tap. Earn. Rise.</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --teal: #00ddb4;
+  --teal2: #00ffcc;
+  --purple: #7c3aed;
+  --purple2: #a855f7;
+  --dark: #03080f;
+  --dark2: #07111e;
+  --dark3: #0c1c30;
+  --text: #e8f8f4;
+  --muted: rgba(232,248,244,0.45);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:0;
+  opacity:.6;
+}
+
+/* ── GRID BG ── */
+.grid-bg {
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,221,180,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,221,180,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── GLOW ORBS ── */
+.orb {
+  position:fixed;
+  border-radius:50%;
+  filter:blur(80px);
+  pointer-events:none;
+  z-index:0;
+}
+.orb1 { width:500px;height:500px;background:rgba(0,221,180,0.07);top:-150px;right:-100px; }
+.orb2 { width:400px;height:400px;background:rgba(124,58,237,0.08);bottom:10%;left:-100px; }
+.orb3 { width:300px;height:300px;background:rgba(0,221,180,0.05);bottom:30%;right:10%; }
+
+/* ── NAV ── */
+nav {
+  position:fixed;
+  top:0;width:100%;
+  padding:18px 40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  z-index:100;
+  background:rgba(3,8,15,0.7);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(0,221,180,0.08);
+}
+
+.nav-logo {
+  font-family:'Space Mono',monospace;
+  font-size:14px;
+  font-weight:700;
+  color:var(--teal);
+  text-decoration:none;
+  letter-spacing:2px;
+}
+
+.nav-logo em { color:var(--purple2); font-style:normal; }
+
+.nav-links { display:flex; gap:32px; align-items:center; }
+
+.nav-links a {
+  color:var(--muted);
+  text-decoration:none;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:1px;
+  transition:color .2s;
+}
+.nav-links a:hover { color:var(--teal); }
+
+.nav-cta {
+  background:var(--teal);
+  color:#000 !important;
+  padding:9px 22px;
+  border-radius:6px;
+  font-weight:700 !important;
+  letter-spacing:1px;
+  transition:transform .2s, box-shadow .2s !important;
+}
+.nav-cta:hover {
+  transform:translateY(-2px) !important;
+  box-shadow:0 8px 24px rgba(0,221,180,0.35) !important;
+  color:#000 !important;
+}
+
+/* ── HERO ── */
+.hero {
+  position:relative;
+  z-index:1;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  padding:120px 40px 80px;
+  max-width:1100px;
+  margin:0 auto;
+  gap:60px;
+}
+
+.hero-left { flex:1; }
+
+.hero-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(0,221,180,0.08);
+  border:1px solid rgba(0,221,180,0.2);
+  border-radius:20px;
+  padding:6px 16px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--teal);
+  letter-spacing:2px;
+  margin-bottom:28px;
+}
+
+.hero-badge::before {
+  content:'';
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--teal);
+  animation:pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.5;transform:scale(1.4);}
+}
+
+.hero-title {
+  font-size:clamp(48px,7vw,88px);
+  font-weight:800;
+  line-height:.95;
+  margin-bottom:24px;
+}
+
+.hero-title .t1 { color:#fff; display:block; }
+.hero-title .t2 {
+  display:block;
+  background:linear-gradient(135deg, var(--teal), var(--purple2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.hero-desc {
+  font-size:17px;
+  color:var(--muted);
+  line-height:1.75;
+  max-width:480px;
+  margin-bottom:40px;
+}
+
+.hero-btns { display:flex; gap:14px; flex-wrap:wrap; }
+
+.btn-main {
+  background:linear-gradient(135deg,var(--teal),#00b89a);
+  color:#000;
+  padding:16px 36px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:14px;
+  text-decoration:none;
+  letter-spacing:1px;
+  transition:all .3s;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.btn-main:hover {
+  transform:translateY(-3px);
+  box-shadow:0 12px 32px rgba(0,221,180,0.4);
+}
+
+.btn-ghost {
+  background:transparent;
+  color:var(--text);
+  padding:16px 36px;
+  border-radius:8px;
+  font-weight:600;
+  font-size:14px;
+  text-decoration:none;
+  letter-spacing:1px;
+  border:1px solid rgba(255,255,255,0.15);
+  transition:all .3s;
+}
+.btn-ghost:hover {
+  border-color:var(--teal);
+  color:var(--teal);
+  transform:translateY(-3px);
+}
+
+/* BEE HERO VISUAL */
+.hero-right {
+  flex:0 0 380px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.bee-ring {
+  width:320px;height:320px;
+  border-radius:50%;
+  border:1px solid rgba(0,221,180,0.15);
+  position:absolute;
+  animation:spin 20s linear infinite;
+}
+.bee-ring2 {
+  width:260px;height:260px;
+  border-radius:50%;
+  border:1px solid rgba(124,58,237,0.15);
+  position:absolute;
+  animation:spin 15s linear infinite reverse;
+}
+
+@keyframes spin { to{transform:rotate(360deg);} }
+
+.hero-bee {
+  width:180px;height:180px;
+  filter:drop-shadow(0 0 40px rgba(0,221,180,0.5));
+  animation:floatBee 5s ease-in-out infinite;
+  position:relative;
+  z-index:2;
+}
+
+@keyframes floatBee {
+  0%,100%{transform:translateY(0) rotate(-2deg);}
+  50%{transform:translateY(-20px) rotate(2deg);}
+}
+
+.bee-dot {
+  position:absolute;
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--teal);
+  box-shadow:0 0 10px var(--teal);
+}
+.bee-dot:nth-child(2){ top:10%; right:20%; animation:orbit 8s linear infinite; }
+.bee-dot:nth-child(3){ bottom:20%; left:15%; background:var(--purple2); box-shadow:0 0 10px var(--purple2); animation:orbit 12s linear infinite reverse; }
+.bee-dot:nth-child(4){ top:40%; left:5%; animation:orbit 10s linear infinite; }
+
+@keyframes orbit {
+  0%{transform:translateY(0);}
+  25%{transform:translateX(8px) translateY(-8px);}
+  50%{transform:translateY(-16px);}
+  75%{transform:translateX(-8px) translateY(-8px);}
+  100%{transform:translateY(0);}
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  position:relative;z-index:1;
+  background:var(--dark2);
+  border-top:1px solid rgba(0,221,180,0.08);
+  border-bottom:1px solid rgba(0,221,180,0.08);
+  padding:28px 40px;
+  display:flex;
+  justify-content:center;
+  gap:0;
+  flex-wrap:wrap;
+}
+
+.stat-item {
+  padding:0 48px;
+  text-align:center;
+  border-right:1px solid rgba(255,255,255,0.06);
+}
+.stat-item:last-child{border-right:none;}
+
+.stat-num {
+  font-family:'Space Mono',monospace;
+  font-size:28px;
+  font-weight:700;
+  color:var(--teal);
+  display:block;
+}
+.stat-label {
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  margin-top:4px;
+}
+
+/* ── SECTION BASE ── */
+.section {
+  position:relative;z-index:1;
+  max-width:1000px;
+  margin:0 auto;
+  padding:100px 40px;
+}
+
+.label {
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--teal);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  margin-bottom:16px;
+  display:block;
+}
+
+.section-h {
+  font-size:clamp(28px,4vw,44px);
+  font-weight:800;
+  color:#fff;
+  line-height:1.15;
+  margin-bottom:48px;
+}
+
+.section-h em {
+  font-style:normal;
+  background:linear-gradient(135deg,var(--teal),var(--purple2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* ── HOW IT WORKS ── */
+.steps-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:20px;
+}
+
+.step-card {
+  background:var(--dark2);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:16px;
+  padding:28px;
+  transition:all .3s;
+  position:relative;
+  overflow:hidden;
+}
+
+.step-card::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(0,221,180,0.04),transparent);
+  opacity:0;
+  transition:opacity .3s;
+}
+
+.step-card:hover {
+  border-color:rgba(0,221,180,0.3);
+  transform:translateY(-4px);
+}
+.step-card:hover::before { opacity:1; }
+
+.step-num {
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:rgba(0,221,180,0.4);
+  letter-spacing:2px;
+  margin-bottom:16px;
+}
+
+.step-icon { font-size:32px; margin-bottom:14px; display:block; }
+
+.step-title {
+  font-size:17px;
+  font-weight:700;
+  color:#fff;
+  margin-bottom:10px;
+}
+
+.step-desc { font-size:14px; color:var(--muted); line-height:1.7; }
+
+/* ── TOKENOMICS ── */
+.token-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:16px;
+}
+
+.token-card {
+  background:var(--dark2);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:24px 16px;
+  text-align:center;
+  transition:all .3s;
+}
+.token-card:hover {
+  border-color:rgba(0,221,180,0.3);
+  transform:translateY(-3px);
+}
+
+.token-pct {
+  font-family:'Space Mono',monospace;
+  font-size:28px;
+  font-weight:700;
+  color:var(--teal);
+  display:block;
+  margin-bottom:8px;
+}
+
+.token-name { font-size:13px; color:var(--muted); }
+
+/* ── ROADMAP ── */
+.roadmap {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  position:relative;
+}
+
+.roadmap::before {
+  content:'';
+  position:absolute;
+  left:24px;top:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,var(--teal),var(--purple),transparent);
+}
+
+.phase {
+  display:flex;
+  gap:32px;
+  padding:0 0 40px 64px;
+  position:relative;
+}
+
+.phase::before {
+  content:'';
+  position:absolute;
+  left:17px;top:6px;
+  width:14px;height:14px;
+  border-radius:50%;
+  background:var(--dark);
+  border:2px solid var(--teal);
+  box-shadow:0 0 12px rgba(0,221,180,0.4);
+}
+
+.phase.done::before { background:var(--teal); }
+
+.phase-num {
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--teal);
+  letter-spacing:2px;
+  white-space:nowrap;
+  padding-top:4px;
+  min-width:24px;
+}
+
+.phase-content {
+  background:var(--dark2);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:20px 24px;
+  flex:1;
+  transition:border-color .3s;
+}
+.phase-content:hover { border-color:rgba(0,221,180,0.25); }
+
+.phase-title {
+  font-size:15px;
+  font-weight:700;
+  color:#fff;
+  margin-bottom:8px;
+}
+
+.phase-desc { font-size:13px; color:var(--muted); line-height:1.65; }
+
+.phase-tag {
+  display:inline-block;
+  margin-top:10px;
+  padding:3px 10px;
+  border-radius:4px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:1px;
+}
+
+.tag-live { background:rgba(0,221,180,0.15); color:var(--teal); }
+.tag-soon { background:rgba(124,58,237,0.15); color:var(--purple2); }
+.tag-future { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.4); }
+
+/* ── WHY US ── */
+.why-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+}
+
+.why-card {
+  background:var(--dark2);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:16px;
+  padding:28px 24px;
+  transition:all .3s;
+}
+.why-card:hover {
+  border-color:rgba(124,58,237,0.35);
+  transform:translateY(-4px);
+}
+
+.why-icon { font-size:28px; margin-bottom:14px; }
+.why-title { font-size:16px; font-weight:700; color:#fff; margin-bottom:8px; }
+.why-desc { font-size:13px; color:var(--muted); line-height:1.65; }
+
+/* ── COMMUNITY ── */
+.social-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;
+}
+
+.social-card {
+  background:var(--dark2);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:20px 20px;
+  text-decoration:none;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:14px;
+  transition:all .3s;
+  font-weight:600;
+  font-size:14px;
+}
+.social-card:hover {
+  border-color:var(--teal);
+  background:rgba(0,221,180,0.05);
+  transform:translateY(-3px);
+  color:#fff;
+}
+.social-icon-wrap {
+  width:40px;height:40px;
+  border-radius:10px;
+  background:rgba(0,221,180,0.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  flex-shrink:0;
+}
+
+/* ── CTA ── */
+.cta-section {
+  position:relative;z-index:1;
+  text-align:center;
+  padding:100px 40px;
+  background:linear-gradient(180deg, transparent, rgba(0,221,180,0.03), transparent);
+}
+
+.cta-h {
+  font-size:clamp(32px,5vw,56px);
+  font-weight:800;
+  color:#fff;
+  margin-bottom:18px;
+  line-height:1.1;
+}
+.cta-h em {
+  font-style:normal;
+  background:linear-gradient(135deg,var(--teal),var(--purple2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.cta-sub {
+  font-size:17px;
+  color:var(--muted);
+  margin-bottom:40px;
+  max-width:500px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+/* ── FOOTER ── */
+footer {
+  position:relative;z-index:1;
+  border-top:1px solid rgba(255,255,255,0.06);
+  padding:32px 40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:16px;
+}
+
+.footer-logo {
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+  color:var(--teal);
+  text-decoration:none;
+}
+
+.footer-links { display:flex; gap:24px; }
+.footer-links a {
+  font-size:12px;
+  color:var(--muted);
+  text-decoration:none;
+  transition:color .2s;
+}
+.footer-links a:hover { color:var(--teal); }
+
+.footer-copy { font-size:11px; color:rgba(255,255,255,0.2); }
+
+/* ── DIVIDER ── */
+.divider {
+  width:100%;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(0,221,180,0.15), transparent);
+  position:relative;z-index:1;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  nav{padding:14px 20px;}
+  .nav-links{display:none;}
+  .hero{flex-direction:column;padding:100px 20px 60px;text-align:center;gap:40px;}
+  .hero-desc{margin:0 auto 32px;}
+  .hero-btns{justify-content:center;}
+  .hero-right{width:100%;height:240px;}
+  .hero-bee{width:130px;height:130px;}
+  .bee-ring{width:220px;height:220px;}
+  .bee-ring2{width:170px;height:170px;}
+  .stats-bar{padding:20px;gap:20px;}
+  .stat-item{padding:0 20px;border-right:none;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;}
+  .stat-item:last-child{border-bottom:none;}
+  .section{padding:60px 20px;}
+  footer{padding:24px 20px;flex-direction:column;text-align:center;}
+  .roadmap::before{left:20px;}
+  .phase{padding-left:52px;}
+  .phase::before{left:13px;}
+}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">🐝 FUTURE<em>-eco</em></a>
+  <div class="nav-links">
+    <a href="#how">How It Works</a>
+    <a href="#token">Tokenomics</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#community">Community</a>
+    <a href="https://t.me/FutureEcoSystemBot" target="_blank" class="nav-cta">▶ Play Now</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-badge">LIVE ON TELEGRAM · TON BLOCKCHAIN</div>
+    <h1 class="hero-title">
+      <span class="t1">TAP. EARN.</span>
+      <span class="t2">RISE.</span>
+    </h1>
+    <p class="hero-desc">FUTURE-eco-system is a Telegram tap-to-earn game where every tap brings you closer to real crypto rewards. Earn FUTURE tokens, level up your Crystal Bee, and be part of the next generation of TON blockchain gaming.</p>
+    <div class="hero-btns">
+      <a href="https://t.me/FutureEcoSystemBot" target="_blank" class="btn-main">🐝 Start Playing — Free</a>
+      <a href="#how" class="btn-ghost">Learn More</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="bee-ring"></div>
+    <div class="bee-ring2"></div>
+    <div class="bee-dot"></div>
+    <div class="bee-dot"></div>
+    <div class="bee-dot"></div>
+    <svg class="hero-bee" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bcg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0f7ff"/><stop offset="50%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0c4a6e"/></linearGradient>
+        <linearGradient id="bcg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0f7ff"/><stop offset="30%" stop-color="#7dd3fc"/><stop offset="70%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#0f172a"/></linearGradient>
+        <linearGradient id="bwg1" x1="0%" y1="0%" x2="100%" y2="80%"><stop offset="0%" stop-color="#bfdbfe" stop-opacity="0.9"/><stop offset="40%" stop-color="#67e8f9" stop-opacity="0.75"/><stop offset="80%" stop-color="#a5b4fc" stop-opacity="0.7"/><stop offset="100%" stop-color="#5eead4" stop-opacity="0.8"/></linearGradient>
+        <linearGradient id="bwg2" x1="100%" y1="0%" x2="0%" y2="80%"><stop offset="0%" stop-color="#5eead4" stop-opacity="0.8"/><stop offset="40%" stop-color="#a5b4fc" stop-opacity="0.7"/><stop offset="80%" stop-color="#67e8f9" stop-opacity="0.75"/><stop offset="100%" stop-color="#bfdbfe" stop-opacity="0.9"/></linearGradient>
+        <linearGradient id="bvein" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ddb4"/><stop offset="100%" stop-color="#60a5fa" stop-opacity="0.7"/></linearGradient>
+        <radialGradient id="beyeG" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffffff"/><stop offset="25%" stop-color="#a5f3fc"/><stop offset="55%" stop-color="#0891b2"/><stop offset="100%" stop-color="#020617"/></radialGradient>
+        <filter id="bglow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <path d="M99 97 Q68 62 32 52 Q12 50 16 72 Q20 90 55 97 Q78 102 97 100 Z" fill="url(#bwg1)" stroke="url(#bvein)" stroke-width="0.7"/>
+      <path d="M99 97 Q65 80 38 86 Q52 104 80 101 Z" fill="url(#bwg1)" stroke="url(#bvein)" stroke-width="0.5" opacity="0.7"/>
+      <line x1="97" y1="99" x2="48" y2="68" stroke="url(#bvein)" stroke-width="0.5" opacity="0.7"/>
+      <path d="M101 97 Q132 62 168 52 Q188 50 184 72 Q180 90 145 97 Q122 102 103 100 Z" fill="url(#bwg2)" stroke="url(#bvein)" stroke-width="0.7"/>
+      <path d="M101 97 Q135 80 162 86 Q148 104 120 101 Z" fill="url(#bwg2)" stroke="url(#bvein)" stroke-width="0.5" opacity="0.7"/>
+      <line x1="103" y1="99" x2="152" y2="68" stroke="url(#bvein)" stroke-width="0.5" opacity="0.7"/>
+      <polygon points="100,95 122,110 122,145 100,158 78,145 78,110" fill="url(#bcg2)" stroke="#7dd3fc" stroke-width="0.8"/>
+      <polygon points="100,95 122,110 100,125" fill="white" opacity="0.2"/>
+      <polygon points="78,110 100,95 100,125" fill="white" opacity="0.12"/>
+      <polygon points="122,110 122,145 100,125" fill="#0369a1" opacity="0.25"/>
+      <polygon points="78,110 78,145 100,125" fill="#38bdf8" opacity="0.15"/>
+      <polygon points="100,157 116,167 116,180 100,188 84,180 84,167" fill="url(#bcg2)" stroke="#60a5fa" stroke-width="0.6" opacity="0.9"/>
+      <polygon points="100,186 110,193 100,200 90,193" fill="#1d4ed8" opacity="0.8"/>
+      <polygon points="100,45 118,54 124,70 118,86 100,93 82,86 76,70 82,54" fill="url(#bcg1)" stroke="#7dd3fc" stroke-width="0.8" filter="url(#bglow)"/>
+      <polygon points="100,45 118,54 100,68" fill="white" opacity="0.2"/>
+      <polygon points="82,54 100,45 100,68" fill="white" opacity="0.12"/>
+      <ellipse cx="89" cy="69" rx="11" ry="10" fill="#020617" stroke="#0891b2" stroke-width="0.8"/>
+      <ellipse cx="89" cy="69" rx="8.5" ry="8" fill="url(#beyeG)"/>
+      <ellipse cx="89" cy="69" rx="4" ry="4" fill="#020617"/>
+      <ellipse cx="86" cy="66" rx="3" ry="2" fill="white" opacity="0.9"/>
+      <ellipse cx="89" cy="69" rx="11" ry="10" fill="none" stroke="#00ddb4" stroke-width="0.6" opacity="0.7"/>
+      <ellipse cx="111" cy="69" rx="11" ry="10" fill="#020617" stroke="#0891b2" stroke-width="0.8"/>
+      <ellipse cx="111" cy="69" rx="8.5" ry="8" fill="url(#beyeG)"/>
+      <ellipse cx="111" cy="69" rx="4" ry="4" fill="#020617"/>
+      <ellipse cx="108" cy="66" rx="3" ry="2" fill="white" opacity="0.9"/>
+      <ellipse cx="111" cy="69" rx="11" ry="10" fill="none" stroke="#00ddb4" stroke-width="0.6" opacity="0.7"/>
+      <path d="M92 47 Q86 36 81 26" stroke="#22d3ee" stroke-width="1.2" fill="none" filter="url(#bglow)"/>
+      <circle cx="80" cy="24" r="4" fill="#00ddb4" filter="url(#bglow)"/>
+      <circle cx="80" cy="24" r="2" fill="white" opacity="0.9"/>
+      <path d="M108 47 Q114 36 119 26" stroke="#22d3ee" stroke-width="1.2" fill="none" filter="url(#bglow)"/>
+      <circle cx="120" cy="24" r="4" fill="#00ddb4" filter="url(#bglow)"/>
+      <circle cx="120" cy="24" r="2" fill="white" opacity="0.9"/>
+    </svg>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num">30</span>
+    <span class="stat-label">Levels</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">1B</span>
+    <span class="stat-label">Token Supply</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">4</span>
+    <span class="stat-label">Languages</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">TON</span>
+    <span class="stat-label">Blockchain</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">FREE</span>
+    <span class="stat-label">To Play</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- TGE PROGRESS -->
+<div style="position:relative;z-index:1;max-width:700px;margin:0 auto;padding:40px 40px 0;">
+  <div style="background:rgba(0,221,180,0.05);border:1px solid rgba(0,221,180,0.2);border-radius:16px;padding:24px 28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:'Space Mono',monospace;font-size:12px;color:#00ddb4;letter-spacing:2px;">🎯 TOKEN LAUNCH PROGRESS</div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);">GOAL: 50,000 PLAYERS</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.07);border-radius:8px;height:12px;overflow:hidden;margin-bottom:12px;">
+      <div id="lp-tge-fill" style="height:100%;background:linear-gradient(90deg,#00ddb4,#7c3aed);border-radius:8px;width:0%;transition:width 1.5s ease;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;color:#fff;">🟢 <span id="lp-player-count" style="font-weight:700;color:#00ddb4;">Loading...</span> players joined</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);"><span id="lp-remaining">...</span> remaining until TGE</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider" style="margin-top:40px;"></div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <span class="label">Getting Started</span>
+  <h2 class="section-h">How It <em>Works</em></h2>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <span class="step-icon">📱</span>
+      <div class="step-title">Open Telegram</div>
+      <div class="step-desc">Launch the Mini App directly inside Telegram. No downloads, no installations — works instantly on any device.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <span class="step-icon">🐝</span>
+      <div class="step-title">Tap the Crystal Bee</div>
+      <div class="step-desc">Every tap earns you FUTURE tokens. Manage your energy wisely — it regenerates over time, faster with upgrades.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <span class="step-icon">📈</span>
+      <div class="step-title">Level Up</div>
+      <div class="step-desc">Progress through 30 unique levels — from Crystal Larva all the way to CRYSTAL GOD. Higher levels mean bigger rewards.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">04</div>
+      <span class="step-icon">👥</span>
+      <div class="step-title">Invite Friends</div>
+      <div class="step-desc">Share your referral code. You get +500 FUTURE, your friend gets +500 FUTURE. Everyone wins.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">05</div>
+      <span class="step-icon">✅</span>
+      <div class="step-title">Complete Missions</div>
+      <div class="step-desc">Daily tasks, streak bonuses, and achievement rewards keep the earnings flowing every single day.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">06</div>
+      <span class="step-icon">💎</span>
+      <div class="step-title">Connect & Earn</div>
+      <div class="step-desc">Link your TON wallet via Tonkeeper. As the ecosystem grows, your FUTURE tokens grow in value with it.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- WHY US -->
+<section class="section">
+  <span class="label">Why FUTURE</span>
+  <h2 class="section-h">Built Different.<br><em>Built for You.</em></h2>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">⚡</div>
+      <div class="why-title">Instant Access</div>
+      <div class="why-desc">No app store, no wallet setup required to start. Open Telegram and you're playing in 10 seconds.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🔗</div>
+      <div class="why-title">Real Blockchain</div>
+      <div class="why-desc">Built on TON — the fastest growing blockchain. Your tokens are tied to real infrastructure.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🌍</div>
+      <div class="why-title">4 Languages</div>
+      <div class="why-desc">English, Russian, Portuguese and Lithuanian. A truly global community from day one.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🚀</div>
+      <div class="why-title">Early Advantage</div>
+      <div class="why-desc">Early players accumulate the most tokens before the official listing. The sooner you start, the better.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🔒</div>
+      <div class="why-title">Transparent</div>
+      <div class="why-desc">Open source code on GitHub. All player data stored securely with real-time Supabase sync.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🎮</div>
+      <div class="why-title">Actually Fun</div>
+      <div class="why-desc">Boosts, skins, daily spins, leaderboards, achievements — more than just tapping a button.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TOKENOMICS -->
+<section class="section" id="token">
+  <span class="label">Token Distribution</span>
+  <h2 class="section-h">FUTURE <em>Tokenomics</em></h2>
+  <div class="token-grid">
+    <div class="token-card">
+      <span class="token-pct">40%</span>
+      <div class="token-name">🎮 Play-to-Earn</div>
+    </div>
+    <div class="token-card">
+      <span class="token-pct">20%</span>
+      <div class="token-name">💧 Liquidity</div>
+    </div>
+    <div class="token-card">
+      <span class="token-pct">15%</span>
+      <div class="token-name">👥 Team</div>
+    </div>
+    <div class="token-card">
+      <span class="token-pct">10%</span>
+      <div class="token-name">🚀 Marketing</div>
+    </div>
+    <div class="token-card">
+      <span class="token-pct">8%</span>
+      <div class="token-name">🤝 Partners</div>
+    </div>
+    <div class="token-card">
+      <span class="token-pct">7%</span>
+      <div class="token-name">💼 Reserve</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ROADMAP -->
+<section class="section" id="roadmap">
+  <span class="label">The Plan</span>
+  <h2 class="section-h">Road<em>map</em></h2>
+  <div class="roadmap">
+    <div class="phase done">
+      <div class="phase-num">01</div>
+      <div class="phase-content">
+        <div class="phase-title">Phase 1 — Launch · May–Jun 2026</div>
+        <div class="phase-desc">Telegram Mini App live, Crystal Bee mechanics, TON wallet integration, referral system, 4-language support, Supabase leaderboard, in-game shop.</div>
+        <span class="phase-tag tag-live">✓ LIVE NOW</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num">02</div>
+      <div class="phase-content">
+        <div class="phase-title">Phase 2 — Token Launch · Jul–Aug 2026</div>
+        <div class="phase-desc">Official FUTURE token deployment on TON mainnet, Ston.fi DEX listing, token withdrawal for players, target 100,000 active users.</div>
+        <span class="phase-tag tag-soon">COMING SOON</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num">03</div>
+      <div class="phase-content">
+        <div class="phase-title">Phase 3 — Exchange Listings · Sep–Oct 2026</div>
+        <div class="phase-desc">MEXC & Gate.io listings, staking platform launch, NFT Crystal Bee collection, 500,000 users milestone.</div>
+        <span class="phase-tag tag-future">Q3 2026</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num">04</div>
+      <div class="phase-content">
+        <div class="phase-title">Phase 4 — Ecosystem · Nov–Dec 2026</div>
+        <div class="phase-desc">Governance voting, DeFi integration, cross-chain bridge (TON ↔ BNB), 1,000,000 users target.</div>
+        <span class="phase-tag tag-future">Q4 2026</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FOUNDER -->
+<section class="section" id="founder">
+  <span class="label">The Story</span>
+  <h2 class="section-h">Behind <em>FUTURE</em></h2>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,221,180,0.12);border-radius:20px;padding:36px;max-width:680px;margin:0 auto;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(180deg,#00ddb4,#7c3aed);border-radius:4px 0 0 4px;"></div>
+    <div style="font-size:48px;margin-bottom:20px;">🧑‍💻</div>
+    <p style="font-size:16px;color:rgba(255,255,255,0.85);line-height:1.85;margin-bottom:16px;">
+      I'm a solo developer from Lithuania. For two years I thought about what to build — everyone around me was creating things, and I had plenty of ideas but limited resources. I come from a simple family, but I always believed I could create something meaningful — not just for myself, but for others too.
+    </p>
+    <p style="font-size:16px;color:rgba(255,255,255,0.85);line-height:1.85;margin-bottom:16px;">
+      FUTURE-eco-system is that project. Built from scratch, with no big team or investors — just passion, ideas, and the belief that Telegram Mini Apps are the future of crypto gaming. Every update, every feature, every line of code is made by one person who genuinely wants this community to succeed.
+    </p>
+    <p style="font-size:16px;color:#00ddb4;line-height:1.85;font-weight:600;">
+      If you're here early — thank you. You're part of something real.
+    </p>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:12px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#00ddb4,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;">🐝</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#fff;">Solo Founder</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);">Lithuania · Building since 2026</div>
+      </div>
+      <a href="mailto:futureecosystem999@gmail.com" style="margin-left:auto;font-size:12px;color:#00ddb4;text-decoration:none;border:1px solid rgba(0,221,180,0.3);padding:6px 14px;border-radius:6px;transition:all .2s;">✉️ Contact</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- COMMUNITY -->
+<section class="section" id="community">
+  <span class="label">Join Us</span>
+  <h2 class="section-h">The <em>Community</em></h2>
+  <div class="social-grid">
+    <a href="https://t.me/FutureEcoSystemBot" target="_blank" class="social-card">
+      <div class="social-icon-wrap">✈️</div>
+      Telegram Bot
+    </a>
+    <a href="https://x.com/Futuresystem999" target="_blank" class="social-card">
+      <div class="social-icon-wrap">𝕏</div>
+      X (Twitter)
+    </a>
+    <a href="https://www.instagram.com/futureecosystem999" target="_blank" class="social-card">
+      <div class="social-icon-wrap">📸</div>
+      Instagram
+    </a>
+    <a href="https://www.facebook.com/share/1C26VneLKJ/" target="_blank" class="social-card">
+      <div class="social-icon-wrap">👍</div>
+      Facebook
+    </a>
+    <a href="https://futureecosystem999.github.io/future-eco-system/" target="_blank" class="social-card">
+      <div class="social-icon-wrap">🌐</div>
+      Web App
+    </a>
+    <a href="mailto:futureecosystem999@gmail.com" class="social-card">
+      <div class="social-icon-wrap">✉️</div>
+      Contact Us
+    </a>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2 class="cta-h">Your FUTURE<br>starts <em>today.</em></h2>
+  <p class="cta-sub">Thousands of players are already earning. The earlier you start, the more you accumulate before the official token launch.</p>
+  <a href="https://t.me/FutureEcoSystemBot" target="_blank" class="btn-main" style="display:inline-flex;">🐝 Play for Free on Telegram</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">🐝 FUTURE-eco-system</a>
+  <div class="footer-links">
+    <a href="#how">How It Works</a>
+    <a href="#token">Tokenomics</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="mailto:futureecosystem999@gmail.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2026 FUTURE-eco-system · Not financial advice · Crypto involves risk</div>
+</footer>
+
+<script>
+async function loadTGECount() {
+    try {
+        const res = await fetch('https://sbfkpwunsqwjplkdhsyq.supabase.co/rest/v1/users?select=user_id', {
+            headers: {
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiZmtwd3Vuc3F3anBsa2Roc3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0ODczNzUsImV4cCI6MjA5NTA2MzM3NX0.L1ucNe91Lv9hu86HSkWeoq-cCR7DBE-nXPT_UUIHXc0',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiZmtwd3Vuc3F3anBsa2Roc3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0ODczNzUsImV4cCI6MjA5NTA2MzM3NX0.L1ucNe91Lv9hu86HSkWeoq-cCR7DBE-nXPT_UUIHXc0'
+            }
+        });
+        const data = await res.json();
+        const count = data ? data.length : 0;
+        const goal = 50000;
+        const pct = Math.min((count / goal) * 100, 100);
+        document.getElementById('lp-tge-fill').style.width = pct + '%';
+        document.getElementById('lp-player-count').textContent = count.toLocaleString();
+        document.getElementById('lp-remaining').textContent = Math.max(goal - count, 0).toLocaleString();
+    } catch(e) {}
+}
+setTimeout(loadTGECount, 500);
+</script>
+</body>
+</html>
