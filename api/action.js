@@ -6,7 +6,7 @@ const { sb } = require('./_db.js');
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const LOTTERY_TICKET_TON = 0.1;
 const MAX_TICKETS_PER_CALL = 100;
-const OWNER_WALLET = 'UQDXGYn3W1-RUGqvVZ7TBpg7dQglqtDWNYEbH4N0JvEp8AJs'; // Replace with your wallet
+const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Replace with your wallet
 
 // Verify TON payment on-chain using TonCenter API
 async function verifyTonPayment(txHash, ticketCount, walletAddress, tgId) {
