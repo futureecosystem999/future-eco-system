@@ -1,8 +1,8 @@
-// Secrets now come from Vercel Environment Variables.
-// The fallback after || lets the bot keep working even if an env var isn't set yet.
+// Secrets come ONLY from Vercel Environment Variables. No hardcoded fallbacks.
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
-const SB_URL = process.env.SB_URL || 'https://sbfkpwunsqwjplkdhsyq.supabase.co';
-const SB_KEY = process.env.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiZmtwd3Vuc3F3anBsa2Roc3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0ODczNzUsImV4cCI6MjA5NTA2MzM3NX0.L1ucNe91Lv9hu86HSkWeoq-cCR7DBE-nXPT_UUIHXc0';
+const SB_URL = process.env.SB_URL || '';
+// Server-side reads use the SERVICE key (kept secret on the server, never shipped to a browser).
+const SB_KEY = process.env.SB_SERVICE_KEY || '';
 
 const LANDING = 'https://futureecosystem999.github.io/future-eco-system/landing.html';
 const STATS = 'https://futureecosystem999.github.io/future-eco-system/stats.html';
@@ -37,7 +37,7 @@ async function getAllUsers() {
   return await res.json();
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true });
 
   const update = req.body;
