@@ -6,7 +6,7 @@ const { sb } = require('./_db.js');
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const LOTTERY_TICKET_TON = 0.1;
 const MAX_TICKETS_PER_CALL = 100;
-const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Replace with your wallet
+const OWNER_WALLET = 'UQDXGYn3W1-RUGqvVZ7TBpg7dQglqtDWNYEbH4N0JvEp8AJs'; // Replace with your wallet
 
 // Verify TON payment on-chain using TonCenter API
 async function verifyTonPayment(txHash, ticketCount, walletAddress, tgId) {
@@ -83,7 +83,7 @@ async function getUser(tgId) {
   return (r.data && r.data[0]) || null;
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
