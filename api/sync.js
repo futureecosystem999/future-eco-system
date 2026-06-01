@@ -1,49 +1,19 @@
-const crypto = require('crypto');
+// Authenticated balance sync. The browser NEVER writes balances directly.
+// Every write here requires a valid Telegram initData signature, and the
+// server is the single source of truth for balance (anti-cheat capped).
+const { checkTelegramAuth } = require('./_auth.js');
+const { sb } = require('./_db.js');
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
-const SB_URL = process.env.SB_URL || '';
-const SB_SERVICE_KEY = process.env.SB_SERVICE_KEY || '';
 
-function checkTelegramAuth(initData, botToken) {
-  if (!initData || !botToken) return { ok: false, reason: 'missing initData or token' };
-  const params = new URLSearchParams(initData);
-  const hash = params.get('hash');
-  if (!hash) return { ok: false, reason: 'no hash' };
-  params.delete('hash');
-  const dataCheckString = [...params.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-  if (computedHash !== hash) return { ok: false, reason: 'bad signature' };
-  const authDate = parseInt(params.get('auth_date') || '0', 10);
-  if (authDate && (Math.floor(Date.now() / 1000) - authDate) > 86400) return { ok: false, reason: 'expired' };
-  let user = null;
-  try { user = JSON.parse(params.get('user') || 'null'); } catch (e) {}
-  return { ok: true, user };
-}
-
-function maxAllowedBalance(totalTaps) {
-  const taps = Math.max(0, Math.floor(Number(totalTaps) || 0));
-  // Tested against real players (all pass with large headroom) and fabricated balances (caught).
-  // 100/tap covers level + boosters + VIP comfortably; 50k buffer covers referrals/lottery/bonuses.
-  return taps * 100 + 50000;
-}
-
-async function sb(path, method, body) {
-  const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method,
-    headers: {
-      'apikey': SB_SERVICE_KEY,
-      'Authorization': 'Bearer ' + SB_SERVICE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=representation'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  const text = await res.text();
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch (e) {}
-  return { status: res.status, data };
-}
+// Anti-cheat: balance may grow at most this fast since the last sync.
+// taps*100 covers legit per-tap value + boosters/VIP; time cap stops a client
+// from claiming an impossible jump even if it also inflates total_taps.
+const MAX_PER_TAP = 100;
+const BASE_BUFFER = 50000;            // referrals / lottery / one-off bonuses
+const MAX_GROWTH_PER_SEC = 200;       // hard ceiling on balance increase rate
+const WELCOME_BONUS = 500;            // new referred player
+const REFERRER_BONUS = 500;           // person who referred them
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -59,46 +29,93 @@ export default async function handler(req, res) {
   const auth = checkTelegramAuth(body.initData, BOT_TOKEN);
   if (!auth.ok) return res.status(401).json({ ok: false, reason: auth.reason });
 
-  const tgId = auth.user ? String(auth.user.id) : null;
-  if (!tgId) return res.status(400).json({ ok: false, reason: 'no user id' });
-
+  const tgId = String(auth.user.id);
   const p = body.player || {};
+
   const clientBalance = Math.max(0, Math.floor(Number(p.balance) || 0));
   const totalTaps = Math.max(0, Math.floor(Number(p.total_taps) || 0));
   const level = Math.max(1, Math.min(30, Math.floor(Number(p.level) || 1)));
 
-  const cap = maxAllowedBalance(totalTaps);
-
+  // Load existing row (trusted server state)
   let existing = null;
   try {
-    const r = await sb('users?user_id=eq.' + encodeURIComponent(tgId) + '&select=balance,total_taps', 'GET');
+    const r = await sb(
+      'users?user_id=eq.' + encodeURIComponent(tgId) +
+      '&select=balance,total_taps,referred_by,referral_bonus_paid,updated_at',
+      'GET'
+    );
     if (r.data && r.data.length) existing = r.data[0];
   } catch (e) {}
 
   const prevBalance = existing ? Math.floor(Number(existing.balance) || 0) : 0;
+  const prevUpdated = existing && existing.updated_at ? Date.parse(existing.updated_at) : 0;
+  const isNew = !existing;
+
+  // ---- Anti-cheat caps ----
+  const tapCap = totalTaps * MAX_PER_TAP + BASE_BUFFER;
+  const elapsedSec = prevUpdated ? Math.max(1, (Date.now() - prevUpdated) / 1000) : 86400;
+  const growthCap = prevBalance + Math.ceil(elapsedSec * MAX_GROWTH_PER_SEC) + BASE_BUFFER;
+  const cap = Math.min(tapCap, growthCap);
 
   let newBalance = clientBalance;
+  // Anti-cheat: cap how FAST the balance may GROW (stops auto-tap bots / edits).
   if (newBalance > cap) newBalance = cap;
-  if (newBalance < prevBalance) newBalance = prevBalance;
+  // Decreases are always allowed: spending tokens (skins, boosts, lottery, gifts,
+  // withdrawals) is legitimate and must persist across refreshes. Only growth is capped.
+
+  // ---- Server-side referral handling (paid exactly once) ----
+  let bonusApplied = false;
+  const referredBy = existing ? existing.referred_by : (p.referred_by || null);
+  const alreadyPaid = existing ? !!existing.referral_bonus_paid : false;
+
+  if (isNew && p.referred_by) {
+    const refCode = String(p.referred_by).toUpperCase().slice(0, 16);
+    // Award only if the referrer exists and it isn't a self-referral.
+    if (refCode) {
+      try {
+        const r = await sb(
+          'users?referral_code=eq.' + encodeURIComponent(refCode) +
+          '&select=user_id,balance,referral_count&limit=1',
+          'GET'
+        );
+        if (r.data && r.data[0] && String(r.data[0].user_id) !== tgId) {
+          const refUser = r.data[0];
+          await sb('users?user_id=eq.' + encodeURIComponent(refUser.user_id), 'PATCH', {
+            balance: Math.floor(Number(refUser.balance) || 0) + REFERRER_BONUS,
+            referral_count: Math.floor(Number(refUser.referral_count) || 0) + 1
+          });
+          newBalance += WELCOME_BONUS;
+          bonusApplied = true;
+        }
+      } catch (e) {}
+    }
+  }
 
   const row = {
     user_id: tgId,
-    username: (p.username || (auth.user && (auth.user.username || auth.user.first_name)) || 'Player').toString().slice(0, 64),
+    username: (p.username || auth.user.username || auth.user.first_name || 'Player')
+      .toString().slice(0, 64),
     balance: newBalance,
     total_taps: totalTaps,
     level: level,
-    referral_code: p.referral_code || null,
-    referred_by: p.referred_by || null,
+    referral_code: (p.referral_code || ('F' + tgId.slice(-5))).toString().toUpperCase().slice(0, 16),
+    referred_by: referredBy ? String(referredBy).toUpperCase().slice(0, 16) : null,
     referral_count: Math.max(0, Math.floor(Number(p.referral_count) || 0)),
     verified_player: !!p.verified_player,
     vip_member: !!p.vip_member,
+    referral_bonus_paid: alreadyPaid || bonusApplied,
     updated_at: new Date().toISOString()
   };
 
   try {
-    const r = await sb('users', 'POST', row);
+    const r = await sb('users', 'POST', row, 'resolution=merge-duplicates,return=representation');
     if (r.status >= 200 && r.status < 300) {
-      return res.status(200).json({ ok: true, balance: newBalance, capped: clientBalance > cap });
+      return res.status(200).json({
+        ok: true,
+        balance: newBalance,
+        capped: clientBalance > cap,
+        bonus: bonusApplied ? WELCOME_BONUS : 0
+      });
     }
     return res.status(500).json({ ok: false, reason: 'db error', status: r.status });
   } catch (e) {
