@@ -15,7 +15,7 @@ const MAX_GROWTH_PER_SEC = 200;       // hard ceiling on balance increase rate
 const WELCOME_BONUS = 500;            // new referred player
 const REFERRER_BONUS = 500;           // person who referred them
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
