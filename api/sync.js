@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
   try {
     const r = await sb(
       'users?user_id=eq.' + encodeURIComponent(tgId) +
-      '&select=balance,total_taps,referred_by,referral_bonus_paid,updated_at',
+      '&select=balance,total_taps,referred_by,updated_at',
       'GET'
     );
     if (r.data && r.data.length) existing = r.data[0];
@@ -63,10 +63,9 @@ module.exports = async function handler(req, res) {
   // Decreases are always allowed: spending tokens (skins, boosts, lottery, gifts,
   // withdrawals) is legitimate and must persist across refreshes. Only growth is capped.
 
-  // ---- Server-side referral handling (paid exactly once) ----
+  // ---- Server-side referral handling (paid exactly once, only for brand-new users) ----
   let bonusApplied = false;
   const referredBy = existing ? existing.referred_by : (p.referred_by || null);
-  const alreadyPaid = existing ? !!existing.referral_bonus_paid : false;
 
   if (isNew && p.referred_by) {
     const refCode = String(p.referred_by).toUpperCase().slice(0, 16);
@@ -103,7 +102,6 @@ module.exports = async function handler(req, res) {
     referral_count: Math.max(0, Math.floor(Number(p.referral_count) || 0)),
     verified_player: !!p.verified_player,
     vip_member: !!p.vip_member,
-    referral_bonus_paid: alreadyPaid || bonusApplied,
     updated_at: new Date().toISOString()
   };
 
