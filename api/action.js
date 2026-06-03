@@ -10,6 +10,22 @@ const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Proj
 
 const TONCENTER_KEY = '4301f696f9e1ff6dcb3ce9e75daa33b297d4750ef094585cda451c2552190acc';
 
+// TON addresses come in several text forms (raw "0:<hex>" and user-friendly
+// base64 "EQ.../UQ..."). The underlying 32-byte account hash is identical in all
+// of them, so we compare by that hash to bind a payment to the buyer's wallet
+// regardless of which format TonConnect or TonCenter happens to use.
+function addrHashHex(a) {
+  if (!a) return null;
+  a = String(a).trim();
+  const m = a.match(/^-?\d+:([0-9a-fA-F]{64})$/); // raw form
+  if (m) return m[1].toLowerCase();
+  try { // user-friendly base64 / base64url (36 bytes: tag+wc+hash32+crc2)
+    const buf = Buffer.from(a.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    if (buf.length === 36) return buf.subarray(2, 34).toString('hex').toLowerCase();
+  } catch (e) {}
+  return null;
+}
+
 // Verify a TON payment by scanning the OWNER_WALLET's recent INCOMING transactions
 // for one that matches the expected amount within a short time window.
 // This does not rely on the client-supplied "boc" (which is NOT a usable message
@@ -19,7 +35,7 @@ async function verifyTonPayment(ticketCount, expectedSender) {
   const expectedNano = ticketCount * LOTTERY_TICKET_TON * 1e9;
   const minNano = BigInt(Math.floor(expectedNano * 0.9));   // tolerate forward fees
   const maxNano = BigInt(Math.floor(expectedNano * 1.1));   // small overpay tolerance
-  const wantSender = String(expectedSender || '').toLowerCase().trim();
+  const wantHash = addrHashHex(expectedSender);
   const WINDOW_SEC = 30 * 60; // payment must be from the last 30 minutes
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -48,10 +64,11 @@ async function verifyTonPayment(ticketCount, expectedSender) {
         const fresh = ageSec <= WINDOW_SEC;
         const src = String(inMsg.source || '').toLowerCase();
         seen.push({ val: String(inMsg.value || '0'), ageSec, src });
-        // Bind the payment to the buyer's wallet when we know it (airtight against
-        // someone claiming another player's payment). If sender is unknown, fall
-        // back to amount+time so legitimate buys are never wrongly blocked.
-        const srcOk = !wantSender || src === wantSender;
+        // Bind the payment to the buyer's wallet when both addresses are parseable
+        // (airtight). If either can't be parsed, fall back to amount+time so a
+        // legitimate buy is never wrongly blocked.
+        const srcHash = addrHashHex(inMsg.source);
+        const srcOk = !wantHash || !srcHash || srcHash === wantHash;
         if (val >= minNano && val <= maxNano && fresh && srcOk) {
           const hash = (tx.transaction_id && tx.transaction_id.hash)
             ? String(tx.transaction_id.hash)
