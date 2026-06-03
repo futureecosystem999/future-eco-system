@@ -149,6 +149,7 @@ module.exports = async function handler(req, res) {
         const dupe = await sb(
           'lottery_tickets?tx_hash=eq.' + encodeURIComponent(onchainHash) + '&select=user_id&limit=1', 'GET');
         if (dupe.data && dupe.data.length > 0) {
+          console.log('LOTTERY reject: payment already used, hash=', onchainHash);
           return res.status(400).json({ ok: false, reason: 'payment already used' });
         }
       } catch (e) { /* if the check fails, fall through; insert still records the hash */ }
@@ -167,9 +168,11 @@ module.exports = async function handler(req, res) {
       }
       const r = await sb('lottery_tickets', 'POST', rows, 'return=minimal');
       if (r.status >= 200 && r.status < 300) {
+        console.log('LOTTERY SUCCESS tickets=', count, 'user=', tgId);
         return res.status(200).json({ ok: true, tickets: count });
       }
-      return res.status(500).json({ ok: false, reason: 'db error' });
+      console.log('LOTTERY reject: db error status=', r.status, 'body=', JSON.stringify(r.data));
+      return res.status(500).json({ ok: false, reason: 'db error ' + r.status });
     }
 
     // ---- WITHDRAW REQUEST (validated against trusted balance) ----
