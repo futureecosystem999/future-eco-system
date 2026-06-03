@@ -8,7 +8,7 @@ const LOTTERY_TICKET_TON = 0.1;
 const MAX_TICKETS_PER_CALL = 100;
 const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Projekto piniginė — turi sutapti su index.html mokėjimo adresu
 
-const TONCENTER_KEY = 'da4abf54434dd601b98978624373e1c33709220b373beaf1bdc4b923ac670410';
+const TONCENTER_KEY = '4301f696f9e1ff6dcb3ce9e75daa33b297d4750ef094585cda451c2552190acc';
 
 // Verify a TON payment by scanning the OWNER_WALLET's recent INCOMING transactions
 // for one that matches the expected amount within a short time window.
