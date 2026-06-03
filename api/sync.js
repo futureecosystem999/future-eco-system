@@ -14,6 +14,7 @@ const BASE_BUFFER = 50000;            // referrals / lottery / one-off bonuses
 const MAX_GROWTH_PER_SEC = 200;       // hard ceiling on balance increase rate
 const WELCOME_BONUS = 500;            // new referred player
 const REFERRER_BONUS = 500;           // person who referred them
+const REFERRAL_QUALIFY_TAPS = 500;    // referred player must be this active before the referrer is paid
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,7 +42,7 @@ module.exports = async function handler(req, res) {
   try {
     const r = await sb(
       'users?user_id=eq.' + encodeURIComponent(tgId) +
-      '&select=balance,total_taps,referred_by,updated_at',
+      '&select=balance,total_taps,referred_by,referral_count,referral_paid,updated_at',
       'GET'
     );
     if (r.data && r.data.length) existing = r.data[0];
@@ -63,13 +64,24 @@ module.exports = async function handler(req, res) {
   // Decreases are always allowed: spending tokens (skins, boosts, lottery, gifts,
   // withdrawals) is legitimate and must persist across refreshes. Only growth is capped.
 
-  // ---- Server-side referral handling (paid exactly once, only for brand-new users) ----
-  let bonusApplied = false;
+  // ---- Server-side referral handling ----
+  // Welcome bonus: paid once to a brand-new referred player (incentive to start).
+  // Referrer bonus: paid ONLY after the referred player proves real activity
+  // (reaches REFERRAL_QUALIFY_TAPS), which stops fake-account farming. Paid once.
+  let bonusApplied = false; // welcome bonus credited to THIS (new) user
   const referredBy = existing ? existing.referred_by : (p.referred_by || null);
+  const alreadyPaid = !!(existing && existing.referral_paid);
+  let referralPaid = alreadyPaid;
 
+  // Brand-new referred player: give the welcome bonus right away.
   if (isNew && p.referred_by) {
-    const refCode = String(p.referred_by).toUpperCase().slice(0, 16);
-    // Award only if the referrer exists and it isn't a self-referral.
+    newBalance += WELCOME_BONUS;
+    bonusApplied = true;
+  }
+
+  // Pay the referrer once the referred player has genuinely played.
+  if (referredBy && !alreadyPaid && totalTaps >= REFERRAL_QUALIFY_TAPS) {
+    const refCode = String(referredBy).toUpperCase().slice(0, 16);
     if (refCode) {
       try {
         const r = await sb(
@@ -83,8 +95,7 @@ module.exports = async function handler(req, res) {
             balance: Math.floor(Number(refUser.balance) || 0) + REFERRER_BONUS,
             referral_count: Math.floor(Number(refUser.referral_count) || 0) + 1
           });
-          newBalance += WELCOME_BONUS;
-          bonusApplied = true;
+          referralPaid = true; // never pay this referrer again for this referred user
         }
       } catch (e) {}
     }
@@ -99,7 +110,11 @@ module.exports = async function handler(req, res) {
     level: level,
     referral_code: (p.referral_code || ('F' + tgId.slice(-5))).toString().toUpperCase().slice(0, 16),
     referred_by: referredBy ? String(referredBy).toUpperCase().slice(0, 16) : null,
-    referral_count: Math.max(0, Math.floor(Number(p.referral_count) || 0)),
+    referral_count: Math.max(
+      Math.max(0, Math.floor(Number(p.referral_count) || 0)),
+      existing ? Math.floor(Number(existing.referral_count) || 0) : 0
+    ),
+    referral_paid: referralPaid,
     verified_player: !!p.verified_player,
     vip_member: !!p.vip_member,
     updated_at: new Date().toISOString()
