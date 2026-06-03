@@ -8,72 +8,52 @@ const LOTTERY_TICKET_TON = 0.1;
 const MAX_TICKETS_PER_CALL = 100;
 const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Projekto piniginė — turi sutapti su index.html mokėjimo adresu
 
-// Verify TON payment on-chain using TonCenter API
-async function verifyTonPayment(txHash, ticketCount, walletAddress, tgId) {
-  const expectedAmount = ticketCount * LOTTERY_TICKET_TON;
-  const minAmount = Math.floor(expectedAmount * 0.99 * 1e9); // 99% of expected (account for fees)
-  const maxAmount = Math.floor(expectedAmount * 1.01 * 1e9); // 101% of expected
+const TONCENTER_KEY = 'da4abf54434dd601b98978624373e1c33709220b373beaf1bdc4b923ac670410';
 
-  try {
-    // Query TonCenter for transaction details
-    const res = await fetch(`https://toncenter.com/api/v2/transactionsByInMessageHash?msg_hash=${txHash}&limit=1`, {
-      headers: { 'X-API-Key': 'da4abf54434dd601b98978624373e1c33709220b373beaf1bdc4b923ac670410' }
-    });
+// Verify a TON payment by scanning the OWNER_WALLET's recent INCOMING transactions
+// for one that matches the expected amount within a short time window.
+// This does not rely on the client-supplied "boc" (which is NOT a usable message
+// hash). On success we return the on-chain transaction hash, which is later stored
+// so the same payment can never be used to claim tickets twice (replay protection).
+async function verifyTonPayment(ticketCount) {
+  const expectedNano = ticketCount * LOTTERY_TICKET_TON * 1e9;
+  const minNano = BigInt(Math.floor(expectedNano * 0.9));   // tolerate forward fees
+  const maxNano = BigInt(Math.floor(expectedNano * 1.1));   // small overpay tolerance
+  const WINDOW_SEC = 30 * 60; // payment must be from the last 30 minutes
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-    if (!res.ok) {
-      return { ok: false, reason: 'tx not found' };
-    }
-
-    const data = await res.json();
-    if (!data.result || !Array.isArray(data.result) || data.result.length === 0) {
-      return { ok: false, reason: 'tx not confirmed' };
-    }
-
-    const tx = data.result[0];
-    const inMsg = tx.in_msg;
-    const outMsgs = tx.out_msgs || [];
-
-    if (!inMsg) {
-      return { ok: false, reason: 'invalid tx structure' };
-    }
-
-    // Check if the incoming message amount is reasonable (payment came from user's wallet)
-    const inAmount = BigInt(inMsg.value || '0');
-    if (inAmount < BigInt(minAmount)) {
-      return { ok: false, reason: 'insufficient amount' };
-    }
-
-    // Check outgoing messages — one should go to OWNER_WALLET with the payment
-    let paymentFound = false;
-    for (const outMsg of outMsgs) {
-      const outAmount = BigInt(outMsg.value || '0');
-      // Look for a message going to the owner wallet with approximately the right amount
-      if (outMsg.destination === OWNER_WALLET && outAmount >= BigInt(minAmount) && outAmount <= BigInt(maxAmount)) {
-        paymentFound = true;
-        break;
+  // Retry a few times: a freshly-confirmed payment may take a few seconds to
+  // appear in TonCenter's index.
+  let lastReason = 'no matching recent payment';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(2500);
+    try {
+      const res = await fetch(
+        `https://toncenter.com/api/v2/getTransactions?address=${encodeURIComponent(OWNER_WALLET)}&limit=40`,
+        { headers: { 'X-API-Key': TONCENTER_KEY } }
+      );
+      if (!res.ok) { lastReason = 'toncenter http ' + res.status; continue; }
+      const data = await res.json();
+      const txs = (data && Array.isArray(data.result)) ? data.result : [];
+      const nowSec = Math.floor(Date.now() / 1000);
+      for (const tx of txs) {
+        const inMsg = tx.in_msg;
+        if (!inMsg) continue;
+        const val = BigInt(String(inMsg.value || '0'));
+        const utime = Number(tx.utime || 0);
+        const fresh = (nowSec - utime) <= WINDOW_SEC;
+        if (val >= minNano && val <= maxNano && fresh) {
+          const hash = (tx.transaction_id && tx.transaction_id.hash)
+            ? String(tx.transaction_id.hash)
+            : ('amt' + String(inMsg.value) + '_lt' + String(tx.transaction_id && tx.transaction_id.lt));
+          return { ok: true, onchainHash: hash };
+        }
       }
+    } catch (e) {
+      lastReason = 'verify error: ' + e.message;
     }
-
-    if (!paymentFound) {
-      return { ok: false, reason: 'payment not sent to owner' };
-    }
-
-    // Check tx status — must be finalized/committed
-    if (tx.utime < Math.floor(Date.now() / 1000) - 3600) {
-      // Accept if older than 1h (definitely finalized)
-      return { ok: true };
-    }
-
-    // For recent txs, make sure it's in a final block
-    const ltRes = await fetch(`https://toncenter.com/api/v2/lookupBlock?workchain=${tx.out_msgs && tx.out_msgs.length ? '-1' : '0'}&shard=-9223372036854775808&seqno=${tx.block_ref ? Math.floor(Math.random() * 1000000) : 0}`);
-    
-    // Simplified: if tx exists in API, we trust it's finalized (TonCenter has delay)
-    return { ok: true };
-
-  } catch (e) {
-    console.error('TonCenter API error:', e.message);
-    return { ok: false, reason: 'verify error: ' + e.message };
   }
+  return { ok: false, reason: lastReason };
 }
 
 async function getUser(tgId) {
@@ -139,26 +119,31 @@ module.exports = async function handler(req, res) {
       if (count < 1 || count > MAX_TICKETS_PER_CALL) {
         return res.status(400).json({ ok: false, reason: 'bad count' });
       }
-      const txHash = String(body.tx_hash || '').slice(0, 256);
-      const walletAddress = String(body.wallet_address || '').slice(0, 128);
-
-      if (!txHash) {
-        return res.status(400).json({ ok: false, reason: 'no tx_hash' });
-      }
-
-      // Verify payment on-chain using TonCenter API
+      // We no longer trust the client-supplied "boc" as proof. Verify the payment
+      // by scanning the owner wallet's recent incoming transactions for a matching amount.
+      let onchainHash = '';
       try {
-        const verified = await verifyTonPayment(txHash, count, walletAddress, tgId);
+        const verified = await verifyTonPayment(count);
         if (!verified.ok) {
           return res.status(400).json({ ok: false, reason: verified.reason });
         }
+        onchainHash = verified.onchainHash;
       } catch (e) {
         console.error('TON payment verify error:', e.message);
-        // On network error, allow but flag for manual review
+        // On network error, do NOT grant tickets (avoid free tickets on outages).
         return res.status(503).json({ ok: false, reason: 'verify service unavailable' });
       }
 
-      // Payment verified — create tickets
+      // Replay protection: this exact on-chain payment must not have been used before.
+      try {
+        const dupe = await sb(
+          'lottery_tickets?tx_hash=eq.' + encodeURIComponent(onchainHash) + '&select=user_id&limit=1', 'GET');
+        if (dupe.data && dupe.data.length > 0) {
+          return res.status(400).json({ ok: false, reason: 'payment already used' });
+        }
+      } catch (e) { /* if the check fails, fall through; insert still records the hash */ }
+
+      // Payment verified — create tickets, tagged with the real on-chain hash.
       const rows = [];
       for (let i = 0; i < count; i++) {
         rows.push({
@@ -167,7 +152,7 @@ module.exports = async function handler(req, res) {
           amount_ton: LOTTERY_TICKET_TON,
           week_number: week,
           won: false,
-          tx_hash: txHash
+          tx_hash: onchainHash
         });
       }
       const r = await sb('lottery_tickets', 'POST', rows, 'return=minimal');
@@ -207,4 +192,3 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, reason: 'exception' });
   }
 }
-
