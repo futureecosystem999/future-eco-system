@@ -22,11 +22,12 @@ async function verifyTonPayment(ticketCount) {
   const WINDOW_SEC = 30 * 60; // payment must be from the last 30 minutes
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  // Retry a few times: a freshly-confirmed payment may take a few seconds to
-  // appear in TonCenter's index.
+  // Poll for up to ~30s: a freshly-confirmed TON payment can take 10-25s to be
+  // confirmed on-chain and indexed by TonCenter. The function may run up to 5 min,
+  // so a longer wait here is safe.
   let lastReason = 'no matching recent payment';
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await sleep(2500);
+  for (let attempt = 0; attempt < 11; attempt++) {
+    if (attempt > 0) await sleep(3000);
     try {
       const res = await fetch(
         `https://toncenter.com/api/v2/getTransactions?address=${encodeURIComponent(OWNER_WALLET)}&limit=40`,
@@ -36,19 +37,27 @@ async function verifyTonPayment(ticketCount) {
       const data = await res.json();
       const txs = (data && Array.isArray(data.result)) ? data.result : [];
       const nowSec = Math.floor(Date.now() / 1000);
+      const seen = [];
       for (const tx of txs) {
         const inMsg = tx.in_msg;
         if (!inMsg) continue;
         const val = BigInt(String(inMsg.value || '0'));
         const utime = Number(tx.utime || 0);
-        const fresh = (nowSec - utime) <= WINDOW_SEC;
+        const ageSec = nowSec - utime;
+        const fresh = ageSec <= WINDOW_SEC;
+        seen.push({ val: String(inMsg.value || '0'), ageSec, src: inMsg.source || '' });
         if (val >= minNano && val <= maxNano && fresh) {
           const hash = (tx.transaction_id && tx.transaction_id.hash)
             ? String(tx.transaction_id.hash)
             : ('amt' + String(inMsg.value) + '_lt' + String(tx.transaction_id && tx.transaction_id.lt));
+          console.log('LOTTERY verify MATCH', { val: String(inMsg.value), ageSec });
           return { ok: true, onchainHash: hash };
         }
       }
+      console.log('LOTTERY verify attempt', attempt, 'no match. want nano',
+        String(minNano), '-', String(maxNano), 'within', WINDOW_SEC, 's. incoming seen:',
+        JSON.stringify(seen.slice(0, 8)));
+      lastReason = 'no matching recent payment';
     } catch (e) {
       lastReason = 'verify error: ' + e.message;
     }
@@ -125,6 +134,7 @@ module.exports = async function handler(req, res) {
       try {
         const verified = await verifyTonPayment(count);
         if (!verified.ok) {
+          console.log('LOTTERY reject:', verified.reason, 'count=', count);
           return res.status(400).json({ ok: false, reason: verified.reason });
         }
         onchainHash = verified.onchainHash;
