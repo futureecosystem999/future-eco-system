@@ -15,10 +15,11 @@ const TONCENTER_KEY = '4301f696f9e1ff6dcb3ce9e75daa33b297d4750ef094585cda451c255
 // This does not rely on the client-supplied "boc" (which is NOT a usable message
 // hash). On success we return the on-chain transaction hash, which is later stored
 // so the same payment can never be used to claim tickets twice (replay protection).
-async function verifyTonPayment(ticketCount) {
+async function verifyTonPayment(ticketCount, expectedSender) {
   const expectedNano = ticketCount * LOTTERY_TICKET_TON * 1e9;
   const minNano = BigInt(Math.floor(expectedNano * 0.9));   // tolerate forward fees
   const maxNano = BigInt(Math.floor(expectedNano * 1.1));   // small overpay tolerance
+  const wantSender = String(expectedSender || '').toLowerCase().trim();
   const WINDOW_SEC = 30 * 60; // payment must be from the last 30 minutes
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -45,8 +46,13 @@ async function verifyTonPayment(ticketCount) {
         const utime = Number(tx.utime || 0);
         const ageSec = nowSec - utime;
         const fresh = ageSec <= WINDOW_SEC;
-        seen.push({ val: String(inMsg.value || '0'), ageSec, src: inMsg.source || '' });
-        if (val >= minNano && val <= maxNano && fresh) {
+        const src = String(inMsg.source || '').toLowerCase();
+        seen.push({ val: String(inMsg.value || '0'), ageSec, src });
+        // Bind the payment to the buyer's wallet when we know it (airtight against
+        // someone claiming another player's payment). If sender is unknown, fall
+        // back to amount+time so legitimate buys are never wrongly blocked.
+        const srcOk = !wantSender || src === wantSender;
+        if (val >= minNano && val <= maxNano && fresh && srcOk) {
           const hash = (tx.transaction_id && tx.transaction_id.hash)
             ? String(tx.transaction_id.hash)
             : ('amt' + String(inMsg.value) + '_lt' + String(tx.transaction_id && tx.transaction_id.lt));
@@ -129,10 +135,12 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ ok: false, reason: 'bad count' });
       }
       // We no longer trust the client-supplied "boc" as proof. Verify the payment
-      // by scanning the owner wallet's recent incoming transactions for a matching amount.
+      // by scanning the owner wallet's recent incoming transactions for a matching
+      // amount AND a matching sender (the buyer's connected wallet).
+      const buyerWallet = String(body.wallet_address || '').slice(0, 128);
       let onchainHash = '';
       try {
-        const verified = await verifyTonPayment(count);
+        const verified = await verifyTonPayment(count, buyerWallet);
         if (!verified.ok) {
           console.log('LOTTERY reject:', verified.reason, 'count=', count);
           return res.status(400).json({ ok: false, reason: verified.reason });
@@ -205,3 +213,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, reason: 'exception' });
   }
 }
+
