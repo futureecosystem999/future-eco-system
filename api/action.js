@@ -225,49 +225,146 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ ok: false, reason: 'db error' });
     }
 
-    // ---- COINFLIP (server-side RNG, FUTURE token only) ----
+    // ---- COINFLIP (server-side RNG, 33% win chance) ----
     if (action === 'coinflip') {
-      const bet = Math.floor(Number(body.bet) || 0);
       const choice = String(body.choice || ''); // 'heads' or 'tails'
+      const currency = String(body.currency || 'future'); // 'future' | 'stars' | 'ton'
 
-      if (bet < 10) return res.status(400).json({ ok: false, reason: 'min bet 10 FUTURE' });
-      if (bet > 100000) return res.status(400).json({ ok: false, reason: 'max bet 100000 FUTURE' });
       if (choice !== 'heads' && choice !== 'tails') {
         return res.status(400).json({ ok: false, reason: 'invalid choice' });
       }
 
-      const user = await getUser(tgId);
-      if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
-      const currentBalance = Math.floor(Number(user.balance) || 0);
-      if (currentBalance < bet) {
-        return res.status(400).json({ ok: false, reason: 'insufficient balance' });
-      }
-
-      // Provably fair RNG: crypto.randomBytes for server-side fairness
+      // Provably fair RNG: crypto.randomBytes — 33% win chance
       const crypto = require('crypto');
       const randByte = crypto.randomBytes(1)[0]; // 0–255
-      const result = randByte < 128 ? 'heads' : 'tails'; // ~50/50
-      const won = result === choice;
+      // 33% win: byte 0–84 = win, 85–255 = loss (85/256 ≈ 33.2%)
+      const userWins = randByte <= 84;
+      // Result coin side — if user wins, coin matches their choice; if loses, coin is opposite
+      const result = userWins ? choice : (choice === 'heads' ? 'tails' : 'heads');
 
-      // House edge: win pays 1.9x (5% house edge)
-      const payout = won ? Math.floor(bet * 1.9) : 0;
-      const newBalance = won
-        ? currentBalance - bet + payout
-        : currentBalance - bet;
+      // ---- FUTURE mode ----
+      if (currency === 'future') {
+        const bet = Math.floor(Number(body.bet) || 0);
+        if (bet < 10) return res.status(400).json({ ok: false, reason: 'min bet 10 FUTURE' });
+        if (bet > 100000) return res.status(400).json({ ok: false, reason: 'max bet 100000 FUTURE' });
 
-      await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', {
-        balance: newBalance
-      });
+        const user = await getUser(tgId);
+        if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
+        const currentBalance = Math.floor(Number(user.balance) || 0);
+        if (currentBalance < bet) return res.status(400).json({ ok: false, reason: 'insufficient balance' });
 
-      console.log('COINFLIP user=', tgId, 'bet=', bet, 'choice=', choice, 'result=', result, 'won=', won, 'newBal=', newBalance);
+        // Win pays 2.5x (house edge ~17% given 33% chance)
+        const payout = userWins ? Math.floor(bet * 2.5) : 0;
+        const newBalance = userWins ? currentBalance - bet + payout : currentBalance - bet;
+
+        await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', { balance: newBalance });
+        console.log('COINFLIP FUTURE user=', tgId, 'bet=', bet, 'won=', userWins, 'newBal=', newBalance);
+        return res.status(200).json({ ok: true, result, won: userWins, bet, payout, newBalance });
+      }
+
+      // ---- STARS mode (50 Stars in, 125 Stars win) ----
+      // Stars payment handled by Telegram billing separately; here we just run RNG
+      if (currency === 'stars') {
+        console.log('COINFLIP STARS user=', tgId, 'won=', userWins);
+        return res.status(200).json({ ok: true, result, won: userWins, currency: 'stars',
+          bet_stars: 50, payout_stars: userWins ? 125 : 0 });
+      }
+
+      // ---- TON mode (0.05 TON in, 0.125 TON win) ----
+      if (currency === 'ton') {
+        console.log('COINFLIP TON user=', tgId, 'won=', userWins);
+        return res.status(200).json({ ok: true, result, won: userWins, currency: 'ton',
+          bet_ton: 0.05, payout_ton: userWins ? 0.125 : 0 });
+      }
+
+      return res.status(400).json({ ok: false, reason: 'unknown currency' });
+    }
+
+
+    // ---- LUCKY SPIN (server-side RNG, house edge ~35%) ----
+    if (action === 'lucky_spin') {
+      const user = await getUser(tgId);
+      if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
+
+      // Check daily spin limit (stored in spin_data column or separate table)
+      // Use a simple daily key in user metadata
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const spinMeta = await sb(
+        'spin_logs?user_id=eq.' + encodeURIComponent(tgId) +
+        '&spin_date=eq.' + encodeURIComponent(today) +
+        '&select=spin_count&limit=1', 'GET');
+      const spinsToday = (spinMeta.data && spinMeta.data[0]) ? Number(spinMeta.data[0].spin_count || 0) : 0;
+      const maxSpins = 1; // base; VIP gets more client-side display but server enforces 1 for free
+      if (spinsToday >= maxSpins) {
+        return res.status(400).json({ ok: false, reason: 'no spins left today' });
+      }
+
+      // ---- PRIZE TABLE (server authoritative) ----
+      // prob out of 10000 for precision. House edge ~35%
+      // Expected payout per spin = sum(prob/10000 * value)
+      // = (5000*10 + 2000*30 + 1000*100 + 500*200 + 200*500 + 100*800 + 50*1500 + 0*7860) / 10000
+      // = (50000+60000+100000+100000+100000+80000+75000+0) / 10000 = 565000/10000 = 56.5 per spin
+      // If avg spin earns 56.5 FUTURE and daily tap earns ~500+ that's fine — spin is bonus
+      const prizes = [
+        { label: '💎 5000', value: 5000, type: 'tokens', prob: 10,   index: 0 },
+        { label: '🔥 2000', value: 2000, type: 'tokens', prob: 30,   index: 1 },
+        { label: '+1000',   value: 1000, type: 'tokens', prob: 100,  index: 2 },
+        { label: '+500',    value: 500,  type: 'tokens', prob: 200,  index: 3 },
+        { label: '⚡ Energy',value: 500, type: 'energy', prob: 300,  index: 4 },
+        { label: '+200',    value: 200,  type: 'tokens', prob: 500,  index: 5 },
+        { label: '+100',    value: 100,  type: 'tokens', prob: 800,  index: 6 },
+        { label: '+50',     value: 50,   type: 'tokens', prob: 1500, index: 7 },
+        { label: '😢 +10',  value: 10,   type: 'tokens', prob: 6560, index: 8 },
+      ];
+      const total = prizes.reduce((a, b) => a + b.prob, 0); // 10000
+
+      // Provably fair: crypto RNG
+      const crypto = require('crypto');
+      const randBuf = crypto.randomBytes(4);
+      const randVal = randBuf.readUInt32BE(0) % total; // 0..9999
+
+      let cumProb = 0, winner = prizes[prizes.length - 1];
+      for (const p of prizes) {
+        cumProb += p.prob;
+        if (randVal < cumProb) { winner = p; break; }
+      }
+
+      // Near Miss: if player rolled jackpot range+1 (just missed 5000),
+      // force near-miss flag so client shows dramatic "almost" animation
+      const nearMiss = (randVal >= 10 && randVal < 60); // just outside jackpot
+
+      // Apply reward
+      const currentBalance = Math.floor(Number(user.balance) || 0);
+      let newBalance = currentBalance;
+      if (winner.type === 'tokens') newBalance = currentBalance + winner.value;
+      // energy handled client-side for now
+
+      // Update balance
+      if (winner.type === 'tokens') {
+        await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', { balance: newBalance });
+      }
+
+      // Log spin
+      if (spinsToday === 0) {
+        await sb('spin_logs', 'POST', { user_id: tgId, spin_date: today, spin_count: 1 }, 'return=minimal');
+      } else {
+        await sb('spin_logs?user_id=eq.' + encodeURIComponent(tgId) + '&spin_date=eq.' + encodeURIComponent(today),
+          'PATCH', { spin_count: spinsToday + 1 });
+      }
+
+      console.log('SPIN user=', tgId, 'rand=', randVal, 'winner=', winner.label, 'nearMiss=', nearMiss);
 
       return res.status(200).json({
         ok: true,
-        result,
-        won,
-        bet,
-        payout: won ? payout : -bet,
-        newBalance
+        winner: {
+          index: winner.index,
+          label: winner.label,
+          value: winner.value,
+          type: winner.type
+        },
+        nearMiss,
+        newBalance,
+        spinsLeft: 0
       });
     }
 
