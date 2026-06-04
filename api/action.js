@@ -225,9 +225,56 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ ok: false, reason: 'db error' });
     }
 
+    // ---- COINFLIP (server-side RNG, FUTURE token only) ----
+    if (action === 'coinflip') {
+      const bet = Math.floor(Number(body.bet) || 0);
+      const choice = String(body.choice || ''); // 'heads' or 'tails'
+
+      if (bet < 10) return res.status(400).json({ ok: false, reason: 'min bet 10 FUTURE' });
+      if (bet > 100000) return res.status(400).json({ ok: false, reason: 'max bet 100000 FUTURE' });
+      if (choice !== 'heads' && choice !== 'tails') {
+        return res.status(400).json({ ok: false, reason: 'invalid choice' });
+      }
+
+      const user = await getUser(tgId);
+      if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
+      const currentBalance = Math.floor(Number(user.balance) || 0);
+      if (currentBalance < bet) {
+        return res.status(400).json({ ok: false, reason: 'insufficient balance' });
+      }
+
+      // Provably fair RNG: crypto.randomBytes for server-side fairness
+      const crypto = require('crypto');
+      const randByte = crypto.randomBytes(1)[0]; // 0–255
+      const result = randByte < 128 ? 'heads' : 'tails'; // ~50/50
+      const won = result === choice;
+
+      // House edge: win pays 1.9x (5% house edge)
+      const payout = won ? Math.floor(bet * 1.9) : 0;
+      const newBalance = won
+        ? currentBalance - bet + payout
+        : currentBalance - bet;
+
+      await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', {
+        balance: newBalance
+      });
+
+      console.log('COINFLIP user=', tgId, 'bet=', bet, 'choice=', choice, 'result=', result, 'won=', won, 'newBal=', newBalance);
+
+      return res.status(200).json({
+        ok: true,
+        result,
+        won,
+        bet,
+        payout: won ? payout : -bet,
+        newBalance
+      });
+    }
+
     return res.status(400).json({ ok: false, reason: 'unknown action' });
   } catch (e) {
     return res.status(500).json({ ok: false, reason: 'exception' });
   }
 }
+
 
