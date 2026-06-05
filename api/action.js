@@ -375,6 +375,8 @@ module.exports = async function handler(req, res) {
 
       // Product catalog — server authoritative (prices in Stars/XTR)
       const PRODUCTS = {
+        // VIP subscription
+        vip_hivelord: { title: 'Hive Lord VIP (30 days)', desc: '+100% taps, 1500 energy, 3x regen for 30 days', stars: 450, type: 'vip', value: 30 },
         // FUTURE token packs
         future_5000:  { title: '5,000 FUTURE',  desc: 'Instant 5,000 FUTURE tokens',  stars: 100,  type: 'future', value: 5000 },
         future_15000: { title: '15,000 FUTURE', desc: 'Instant 15,000 FUTURE tokens', stars: 250,  type: 'future', value: 15000 },
