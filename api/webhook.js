@@ -51,6 +51,7 @@ async function answerPreCheckout(queryId, ok, errorMessage) {
 
 // Product catalog (must match action.js create_invoice)
 const STAR_PRODUCTS = {
+  vip_hivelord: { type: 'vip', value: 30 },
   future_5000:  { type: 'future', value: 5000 },
   future_15000: { type: 'future', value: 15000 },
   future_50000: { type: 'future', value: 50000 },
@@ -88,6 +89,23 @@ async function creditPurchase(userId, productId, starsAmount, chargeId) {
       method: 'PATCH',
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ balance: newBalance })
+    });
+  }
+
+  // Activate VIP (Hive Lord) — set vip_member + vip_until 30 days from now.
+  // If user already has active VIP, extend from current expiry (stacking).
+  if (product.type === 'vip') {
+    const user = await getUser(userId);
+    const now = Date.now();
+    let base = now;
+    if (user && user.vip_until && Date.parse(user.vip_until) > now) {
+      base = Date.parse(user.vip_until); // extend existing VIP
+    }
+    const vipUntil = new Date(base + product.value * 24 * 60 * 60 * 1000).toISOString();
+    await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ vip_member: true, vip_until: vipUntil })
     });
   }
   // energy & spins are applied client-side (read from star_purchases on next sync)
@@ -244,3 +262,4 @@ module.exports = async function handler(req, res) {
 
   return res.status(200).json({ ok: true });
 }
+
