@@ -368,6 +368,54 @@ module.exports = async function handler(req, res) {
       });
     }
 
+
+    // ---- CREATE STARS INVOICE (Telegram Stars payment) ----
+    if (action === 'create_invoice') {
+      const productId = String(body.product_id || '');
+
+      // Product catalog — server authoritative (prices in Stars/XTR)
+      const PRODUCTS = {
+        // FUTURE token packs
+        future_5000:  { title: '5,000 FUTURE',  desc: 'Instant 5,000 FUTURE tokens',  stars: 100,  type: 'future', value: 5000 },
+        future_15000: { title: '15,000 FUTURE', desc: 'Instant 15,000 FUTURE tokens', stars: 250,  type: 'future', value: 15000 },
+        future_50000: { title: '50,000 FUTURE', desc: 'Instant 50,000 FUTURE tokens', stars: 700,  type: 'future', value: 50000 },
+        // Energy refill
+        energy_full:  { title: 'Full Energy',   desc: 'Instantly refill energy to max', stars: 50,  type: 'energy', value: 0 },
+        // Extra spins
+        spins_3:      { title: '3 Lucky Spins',  desc: '3 extra Lucky Spin chances',    stars: 80,  type: 'spins', value: 3 },
+        spins_10:     { title: '10 Lucky Spins', desc: '10 extra Lucky Spin chances',   stars: 200, type: 'spins', value: 10 }
+      };
+
+      const product = PRODUCTS[productId];
+      if (!product) return res.status(400).json({ ok: false, reason: 'unknown product' });
+
+      // Create invoice link via Telegram Bot API (currency XTR = Telegram Stars)
+      const payload = JSON.stringify({ uid: tgId, pid: productId, t: Date.now() });
+      try {
+        const tgRes = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/createInvoiceLink', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: product.title,
+            description: product.desc,
+            payload: payload,
+            currency: 'XTR',
+            prices: [{ label: product.title, amount: product.stars }]
+          })
+        });
+        const tgData = await tgRes.json();
+        if (tgData.ok && tgData.result) {
+          console.log('INVOICE created user=', tgId, 'product=', productId, 'stars=', product.stars);
+          return res.status(200).json({ ok: true, invoice_link: tgData.result, product: { title: product.title, stars: product.stars } });
+        }
+        console.log('INVOICE fail:', JSON.stringify(tgData));
+        return res.status(500).json({ ok: false, reason: 'invoice creation failed' });
+      } catch (e) {
+        console.error('INVOICE error:', e.message);
+        return res.status(500).json({ ok: false, reason: 'invoice error' });
+      }
+    }
+
     return res.status(400).json({ ok: false, reason: 'unknown action' });
   } catch (e) {
     return res.status(500).json({ ok: false, reason: 'exception' });
