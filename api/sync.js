@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
   try {
     const r = await sb(
       'users?user_id=eq.' + encodeURIComponent(tgId) +
-      '&select=balance,total_taps,referred_by,referral_count,referral_paid,updated_at',
+      '&select=balance,total_taps,referred_by,referral_count,referral_paid,updated_at,vip_member,vip_until',
       'GET'
     );
     if (r.data && r.data.length) existing = r.data[0];
@@ -71,6 +71,13 @@ module.exports = async function handler(req, res) {
   let bonusApplied = false; // welcome bonus credited to THIS (new) user
   const referredBy = existing ? existing.referred_by : (p.referred_by || null);
   const alreadyPaid = !!(existing && existing.referral_paid);
+
+  // VIP is server-authoritative: only valid if vip_until is in the future.
+  // Never trust client-supplied vip_member.
+  let serverVip = false;
+  if (existing && existing.vip_member && existing.vip_until) {
+    serverVip = Date.parse(existing.vip_until) > Date.now();
+  }
   let referralPaid = alreadyPaid;
 
   // Brand-new referred player: give the welcome bonus right away.
@@ -116,7 +123,7 @@ module.exports = async function handler(req, res) {
     ),
     referral_paid: referralPaid,
     verified_player: !!p.verified_player,
-    vip_member: !!p.vip_member,
+    vip_member: serverVip,
     updated_at: new Date().toISOString()
   };
 
@@ -127,7 +134,9 @@ module.exports = async function handler(req, res) {
         ok: true,
         balance: newBalance,
         capped: clientBalance > cap,
-        bonus: bonusApplied ? WELCOME_BONUS : 0
+        bonus: bonusApplied ? WELCOME_BONUS : 0,
+        vip_member: serverVip,
+        vip_until: existing && existing.vip_until ? existing.vip_until : null
       });
     }
     return res.status(500).json({ ok: false, reason: 'db error', status: r.status });
