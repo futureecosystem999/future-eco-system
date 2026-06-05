@@ -37,10 +37,96 @@ async function getAllUsers() {
   return await res.json();
 }
 
+
+// Answer pre-checkout query (must respond within 10s or payment fails)
+async function answerPreCheckout(queryId, ok, errorMessage) {
+  const body = { pre_checkout_query_id: queryId, ok: ok };
+  if (!ok && errorMessage) body.error_message = errorMessage;
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+// Product catalog (must match action.js create_invoice)
+const STAR_PRODUCTS = {
+  future_5000:  { type: 'future', value: 5000 },
+  future_15000: { type: 'future', value: 15000 },
+  future_50000: { type: 'future', value: 50000 },
+  energy_full:  { type: 'energy', value: 0 },
+  spins_3:      { type: 'spins', value: 3 },
+  spins_10:     { type: 'spins', value: 10 }
+};
+
+// Credit a purchase to the user in DB (server-side, trusted)
+async function creditPurchase(userId, productId, starsAmount, chargeId) {
+  const product = STAR_PRODUCTS[productId];
+  if (!product) return false;
+
+  // Replay protection: skip if this telegram_charge_id already recorded
+  try {
+    const dupeRes = await fetch(`${SB_URL}/rest/v1/star_purchases?telegram_charge_id=eq.${encodeURIComponent(chargeId)}&select=id&limit=1`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const dupe = await dupeRes.json();
+    if (dupe && dupe.length > 0) { console.log('PURCHASE already processed:', chargeId); return true; }
+  } catch (e) {}
+
+  // Record purchase
+  await fetch(`${SB_URL}/rest/v1/star_purchases`, {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ user_id: userId, product_id: productId, stars_amount: starsAmount, telegram_charge_id: chargeId })
+  });
+
+  // Apply reward to user balance for FUTURE packs
+  if (product.type === 'future') {
+    const user = await getUser(userId);
+    const newBalance = (user ? Math.floor(Number(user.balance) || 0) : 0) + product.value;
+    await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ balance: newBalance })
+    });
+  }
+  // energy & spins are applied client-side (read from star_purchases on next sync)
+  console.log('PURCHASE credited user=', userId, 'product=', productId);
+  return true;
+}
+
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true });
 
   const update = req.body;
+
+  // ---- STARS PAYMENT: pre-checkout (must answer within 10s) ----
+  if (update.pre_checkout_query) {
+    const q = update.pre_checkout_query;
+    // Approve all valid checkouts (product validity already enforced at invoice creation)
+    await answerPreCheckout(q.id, true);
+    return res.status(200).json({ ok: true });
+  }
+
+  // ---- STARS PAYMENT: successful payment ----
+  if (update.message && update.message.successful_payment) {
+    const sp = update.message.successful_payment;
+    const payerId = String(update.message.from.id);
+    let pid = '';
+    try { pid = JSON.parse(sp.invoice_payload || '{}').pid || ''; } catch (e) {}
+    const chargeId = sp.telegram_payment_charge_id || '';
+    const starsAmount = Number(sp.total_amount) || 0;
+    try {
+      await creditPurchase(payerId, pid, starsAmount, chargeId);
+      await sendMessage(update.message.chat.id,
+        `✅ <b>Payment successful!</b>\n\nYour purchase has been credited. Open the game to see it! 🐝`,
+        [[{ text: '🎮 Open Game', web_app: { url: GAME } }]]
+      );
+    } catch (e) { console.error('payment credit error:', e.message); }
+    return res.status(200).json({ ok: true });
+  }
+
   const msg = update.message;
   if (!msg) return res.status(200).json({ ok: true });
 
