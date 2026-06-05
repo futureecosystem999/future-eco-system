@@ -1303,10 +1303,8 @@
                 <div style="text-align:center;margin-top:8px;font-size:13px;">Bet: <strong style="color:var(--gold);" id="mines-bet-display">100</strong> FUTURE</div>
             </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:4px;">
-            <button id="mines-start-btn" onclick="minesStart()" class="btn-pill" style="flex:1;padding:14px;font-size:15px;font-weight:800;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:999px;color:#fff;cursor:pointer;">💣 Start Game</button>
-            <button id="mines-cashout-btn" onclick="minesCashOut()" class="btn-pill btn-gold" style="flex:1;padding:14px;font-size:15px;font-weight:800;display:none;">💰 Cash Out</button>
-        </div>
+        <button id="mines-start-btn" onclick="minesStart()" class="btn-pill" style="width:100%;padding:14px;font-size:15px;font-weight:800;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:999px;color:#fff;cursor:pointer;margin-top:8px;display:block;">💣 Start Game</button>
+        <button id="mines-cashout-btn" onclick="minesCashOut()" class="btn-pill btn-gold" style="width:100%;padding:14px;font-size:15px;font-weight:800;margin-top:8px;display:none;">💰 Cash Out</button>
     </div>
 
     <!-- ═══════════════════════ NFT ═══════════════════════ -->
@@ -5079,21 +5077,22 @@
     let crashBetPlaced=false, crashCashedOut=false, crashHistory=[];
     let crashStartTime=0;
 
+    function btnOn(el, txt)  { el.removeAttribute('disabled'); el.style.opacity='1'; el.style.pointerEvents='auto'; el.style.cursor='pointer'; if(txt) el.textContent=txt; }
+    function btnOff(el, txt) { el.setAttribute('disabled',''); el.style.opacity='0.4'; el.style.pointerEvents='none'; el.style.cursor='default'; if(txt) el.textContent=txt; }
+
     function crashButtons(mode) {
         const bb = document.getElementById('crash-bet-btn');
         const cb = document.getElementById('crash-cashout-btn');
         if (!bb || !cb) return;
-        // Visada pirmiausia reset abu
-        [bb, cb].forEach(b => { b.style.opacity='0.4'; b.style.pointerEvents='none'; b.style.cursor='default'; });
         if (mode === 'idle' || mode === 'done') {
-            bb.style.opacity='1'; bb.style.pointerEvents='auto'; bb.style.cursor='pointer'; bb.textContent='🚀 Place Bet';
-            cb.textContent='💰 Cash Out';
+            btnOn(bb,  '🚀 Place Bet');
+            btnOff(cb, '💰 Cash Out');
         } else if (mode === 'placed') {
-            bb.textContent='✅ Bet placed!';
-            cb.style.opacity='1'; cb.style.pointerEvents='auto'; cb.style.cursor='pointer'; cb.textContent='💰 Cash Out';
+            btnOff(bb, '✅ Bet placed!');
+            btnOn(cb,  '💰 Cash Out');
         } else if (mode === 'cashout_done') {
-            bb.style.opacity='1'; bb.style.pointerEvents='auto'; bb.style.cursor='pointer'; bb.textContent='🚀 Place Bet';
-            cb.textContent='✅ Cashed out!';
+            btnOn(bb,  '🚀 Place Bet');
+            btnOff(cb, '✅ Cashed out!');
         }
     }
 
@@ -5271,7 +5270,7 @@
             const startBtn  = document.getElementById('mines-start-btn');
             const cashBtn   = document.getElementById('mines-cashout-btn');
             const setupCard = document.getElementById('mines-setup-card');
-            if (startBtn)  { startBtn.style.display='flex'; startBtn.textContent='💣 Start Game'; }
+            if (startBtn)  { startBtn.style.display='block'; startBtn.style.opacity='1'; startBtn.removeAttribute('disabled'); startBtn.style.pointerEvents='auto'; startBtn.style.cursor='pointer'; startBtn.textContent='💣 Start Game'; }
             if (cashBtn)   { cashBtn.style.display='none'; }
             if (setupCard) { setupCard.style.display='block'; }
             const badge  = document.getElementById('mines-multi-badge');
@@ -5355,9 +5354,9 @@
         const startBtn  = document.getElementById('mines-start-btn');
         const cashBtn   = document.getElementById('mines-cashout-btn');
         const setupCard = document.getElementById('mines-setup-card');
-        if (startBtn)  startBtn.style.display  = 'none';
-        if (cashBtn)   cashBtn.style.display   = 'flex';
-        if (setupCard) setupCard.style.display = 'none';
+        if (startBtn)  { startBtn.style.display = 'none'; }
+        if (cashBtn)   { cashBtn.style.display = 'block'; cashBtn.style.opacity='1'; cashBtn.removeAttribute('disabled'); cashBtn.style.pointerEvents='auto'; cashBtn.style.cursor='pointer'; cashBtn.textContent='💰 Cash Out'; }
+        if (setupCard) { setupCard.style.display = 'none'; }
     }
 
     function minesReveal(idx) {
@@ -5420,7 +5419,7 @@
         const startBtn  = document.getElementById('mines-start-btn');
         const cashBtn   = document.getElementById('mines-cashout-btn');
         const setupCard = document.getElementById('mines-setup-card');
-        if (startBtn)  { startBtn.style.display='flex'; startBtn.textContent='💣 Play Again'; }
+        if (startBtn)  { startBtn.style.display='block'; startBtn.style.opacity='1'; startBtn.removeAttribute('disabled'); startBtn.style.pointerEvents='auto'; startBtn.style.cursor='pointer'; startBtn.textContent='💣 Play Again'; }
         if (cashBtn)   { cashBtn.style.display='none'; }
         if (setupCard) { setupCard.style.display='block'; }
     }
