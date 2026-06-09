@@ -141,6 +141,36 @@ module.exports = async function handler(req, res) {
   const action = body.action;
 
   try {
+    // ---- SPEND FUTURE (server-authoritative) -> feeds the Treasury jackpot pool ----
+    // The spent FUTURE is never destroyed: it moves from the player's balance into
+    // the shared treasury pool, which is redistributed weekly. Reason is for stats.
+    if (action === 'spend') {
+      const amount = Math.floor(Number(body.amount) || 0);
+      const reason = String(body.reason || 'spend').slice(0, 32);
+      if (amount <= 0) return res.status(400).json({ ok: false, reason: 'bad amount' });
+
+      const user = await getUser(tgId);
+      if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
+      const bal = Math.floor(Number(user.balance) || 0);
+      if (bal < amount) return res.status(400).json({ ok: false, reason: 'insufficient balance' });
+
+      const newBal = bal - amount;
+      const pr = await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', { balance: newBal });
+      if (pr.status < 200 || pr.status >= 300) {
+        return res.status(500).json({ ok: false, reason: 'balance update failed' });
+      }
+
+      // Atomically move the spent amount into the shared pool (never destroyed).
+      let pool = null;
+      try {
+        const tr = await sb('rpc/treasury_add', 'POST', { amt: amount });
+        if (tr.data != null) pool = Number(tr.data);
+      } catch (e) { console.error('treasury_add error:', e.message); }
+
+      console.log('SPEND user=', tgId, 'amount=', amount, 'reason=', reason, 'pool=', pool);
+      return res.status(200).json({ ok: true, balance: newBal, pool: pool });
+    }
+
     // ---- GIFT FUTURE to another player by referral code ----
     if (action === 'gift') {
       const code = String(body.code || '').toUpperCase().slice(0, 16);
