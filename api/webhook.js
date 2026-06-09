@@ -57,8 +57,13 @@ const STAR_PRODUCTS = {
   future_50000: { type: 'future', value: 50000 },
   energy_full:  { type: 'energy', value: 0 },
   spins_3:      { type: 'spins', value: 3 },
-  spins_10:     { type: 'spins', value: 10 }
+  spins_10:     { type: 'spins', value: 10 },
+  nft_aurora:   { type: 'nft', value: 'aurora' },
+  nft_diamond:  { type: 'nft', value: 'diamond' }
 };
+
+// NFT kasdienė nauda (turi sutapti su action.js NFT_CATALOG / index.html)
+const NFT_DAILY = { aurora: 50, diamond: 200, inferno: 500, void: 1500, cosmic: 5000 };
 
 // Credit a purchase to the user in DB (server-side, trusted)
 async function creditPurchase(userId, productId, starsAmount, chargeId) {
@@ -107,6 +112,26 @@ async function creditPurchase(userId, productId, starsAmount, chargeId) {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ vip_member: true, vip_until: vipUntil })
     });
+  }
+  // NFT (Stars): record ownership. Replay protected by star_purchases dedupe above.
+  if (product.type === 'nft') {
+    const nftId = product.value;
+    // Skip if already owned (idempotent).
+    let alreadyOwned = false;
+    try {
+      const ownRes = await fetch(`${SB_URL}/rest/v1/nft_owned?user_id=eq.${encodeURIComponent(userId)}&nft_id=eq.${encodeURIComponent(nftId)}&select=id&limit=1`, {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      const own = await ownRes.json();
+      alreadyOwned = own && own.length > 0;
+    } catch (e) {}
+    if (!alreadyOwned) {
+      await fetch(`${SB_URL}/rest/v1/nft_owned`, {
+        method: 'POST',
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ user_id: userId, nft_id: nftId, source: 'stars', telegram_charge_id: chargeId, daily: NFT_DAILY[nftId] || 0, acquired_at: new Date().toISOString() })
+      });
+    }
   }
   // energy & spins are applied client-side (read from star_purchases on next sync)
   console.log('PURCHASE credited user=', userId, 'product=', productId);
