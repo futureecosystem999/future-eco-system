@@ -10,6 +10,16 @@ const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Proj
 
 const TONCENTER_KEY = '4301f696f9e1ff6dcb3ce9e75daa33b297d4750ef094585cda451c2552190acc';
 
+// NFT katalogas — serveris autoritetingas (kainos Stars/TON, kasdienė nauda, supply).
+// Turi sutapti su index.html NFT_ITEMS.
+const NFT_CATALOG = {
+  aurora:  { currency: 'stars', stars: 50,  daily: 50,   supply: 1000 },
+  diamond: { currency: 'stars', stars: 250, daily: 200,  supply: 500  },
+  inferno: { currency: 'ton',   ton: 0.5,   daily: 500,  supply: 200  },
+  void:    { currency: 'ton',   ton: 2,     daily: 1500, supply: 50   },
+  cosmic:  { currency: 'ton',   ton: 5,     daily: 5000, supply: 10   }
+};
+
 // TON addresses come in several text forms (raw "0:<hex>" and user-friendly
 // base64 "EQ.../UQ..."). The underlying 32-byte account hash is identical in all
 // of them, so we compare by that hash to bind a payment to the buyer's wallet
@@ -31,8 +41,8 @@ function addrHashHex(a) {
 // This does not rely on the client-supplied "boc" (which is NOT a usable message
 // hash). On success we return the on-chain transaction hash, which is later stored
 // so the same payment can never be used to claim tickets twice (replay protection).
-async function verifyTonPayment(ticketCount, expectedSender) {
-  const expectedNano = ticketCount * LOTTERY_TICKET_TON * 1e9;
+async function verifyTonPayment(expectedTon, expectedSender) {
+  const expectedNano = Number(expectedTon) * 1e9;
   const minNano = BigInt(Math.floor(expectedNano * 0.9));   // tolerate forward fees
   const maxNano = BigInt(Math.floor(expectedNano * 1.1));   // small overpay tolerance
   const wantHash = addrHashHex(expectedSender);
@@ -86,6 +96,24 @@ async function verifyTonPayment(ticketCount, expectedSender) {
     }
   }
   return { ok: false, reason: lastReason };
+}
+
+// Shared replay protection ACROSS features. A single TON payment may match the
+// amount of more than one product (e.g. 0.5 TON = inferno NFT = 5 lottery tickets),
+// so the same on-chain tx hash must be rejected whether it was already consumed by
+// the lottery OR by an NFT mint. Returns true if the hash was already used anywhere.
+async function txAlreadyUsed(hash) {
+  if (!hash) return false;
+  const h = encodeURIComponent(hash);
+  try {
+    const a = await sb('lottery_tickets?tx_hash=eq.' + h + '&select=user_id&limit=1', 'GET');
+    if (a.data && a.data.length > 0) return true;
+  } catch (e) {}
+  try {
+    const b = await sb('nft_owned?tx_hash=eq.' + h + '&select=id&limit=1', 'GET');
+    if (b.data && b.data.length > 0) return true;
+  } catch (e) {}
+  return false;
 }
 
 async function getUser(tgId) {
@@ -157,7 +185,7 @@ module.exports = async function handler(req, res) {
       const buyerWallet = String(body.wallet_address || '').slice(0, 128);
       let onchainHash = '';
       try {
-        const verified = await verifyTonPayment(count, buyerWallet);
+        const verified = await verifyTonPayment(count * LOTTERY_TICKET_TON, buyerWallet);
         if (!verified.ok) {
           console.log('LOTTERY reject:', verified.reason, 'count=', count);
           return res.status(400).json({ ok: false, reason: verified.reason });
@@ -169,15 +197,12 @@ module.exports = async function handler(req, res) {
         return res.status(503).json({ ok: false, reason: 'verify service unavailable' });
       }
 
-      // Replay protection: this exact on-chain payment must not have been used before.
-      try {
-        const dupe = await sb(
-          'lottery_tickets?tx_hash=eq.' + encodeURIComponent(onchainHash) + '&select=user_id&limit=1', 'GET');
-        if (dupe.data && dupe.data.length > 0) {
-          console.log('LOTTERY reject: payment already used, hash=', onchainHash);
-          return res.status(400).json({ ok: false, reason: 'payment already used' });
-        }
-      } catch (e) { /* if the check fails, fall through; insert still records the hash */ }
+      // Replay protection (cross-feature): the same on-chain payment must not have
+      // been used before by the lottery OR an NFT mint.
+      if (await txAlreadyUsed(onchainHash)) {
+        console.log('LOTTERY reject: payment already used, hash=', onchainHash);
+        return res.status(400).json({ ok: false, reason: 'payment already used' });
+      }
 
       // Payment verified — create tickets, tagged with the real on-chain hash.
       const rows = [];
@@ -385,7 +410,10 @@ module.exports = async function handler(req, res) {
         energy_full:  { title: 'Full Energy',   desc: 'Instantly refill energy to max', stars: 50,  type: 'energy', value: 0 },
         // Extra spins
         spins_3:      { title: '3 Lucky Spins',  desc: '3 extra Lucky Spin chances',    stars: 80,  type: 'spins', value: 3 },
-        spins_10:     { title: '10 Lucky Spins', desc: '10 extra Lucky Spin chances',   stars: 200, type: 'spins', value: 10 }
+        spins_10:     { title: '10 Lucky Spins', desc: '10 extra Lucky Spin chances',   stars: 200, type: 'spins', value: 10 },
+        // NFT (Stars) — type 'nft', value = NFT id. Nuosavybė registruojama webhook.js.
+        nft_aurora:   { title: 'Aurora Sovereign NFT',     desc: '+50 FUTURE/day · base Crystal Bee skin', stars: 50,  type: 'nft', value: 'aurora' },
+        nft_diamond:  { title: 'Eternal Diamond King NFT', desc: '+200 FUTURE/day · +5% tap · rare skin',   stars: 250, type: 'nft', value: 'diamond' }
       };
 
       const product = PRODUCTS[productId];
@@ -416,6 +444,69 @@ module.exports = async function handler(req, res) {
         console.error('INVOICE error:', e.message);
         return res.status(500).json({ ok: false, reason: 'invoice error' });
       }
+    }
+
+    // ---- CLAIM NFT via TON payment (verify on-chain, then record ownership) ----
+    if (action === 'nft_claim_ton') {
+      const nftId = String(body.nft_id || '');
+      const nft = NFT_CATALOG[nftId];
+      if (!nft || nft.currency !== 'ton') {
+        return res.status(400).json({ ok: false, reason: 'unknown nft' });
+      }
+
+      // Already owned? (idempotent — never double-charge ownership)
+      try {
+        const ownRes = await sb('nft_owned?user_id=eq.' + encodeURIComponent(tgId) +
+          '&nft_id=eq.' + encodeURIComponent(nftId) + '&select=id&limit=1', 'GET');
+        if (ownRes.data && ownRes.data.length > 0) {
+          return res.status(200).json({ ok: true, nft_id: nftId, already: true });
+        }
+      } catch (e) {}
+
+      // Supply cap (server-authoritative).
+      try {
+        const cntRes = await sb('nft_owned?nft_id=eq.' + encodeURIComponent(nftId) + '&select=id', 'GET');
+        const minted = (cntRes.data && Array.isArray(cntRes.data)) ? cntRes.data.length : 0;
+        if (minted >= nft.supply) {
+          return res.status(400).json({ ok: false, reason: 'sold out' });
+        }
+      } catch (e) {}
+
+      // Verify the TON payment on-chain (amount + sender + recency).
+      const buyerWallet = String(body.wallet_address || '').slice(0, 128);
+      let onchainHash = '';
+      try {
+        const verified = await verifyTonPayment(nft.ton, buyerWallet);
+        if (!verified.ok) {
+          console.log('NFT reject:', verified.reason, 'nft=', nftId);
+          return res.status(400).json({ ok: false, reason: verified.reason });
+        }
+        onchainHash = verified.onchainHash;
+      } catch (e) {
+        console.error('NFT payment verify error:', e.message);
+        return res.status(503).json({ ok: false, reason: 'verify service unavailable' });
+      }
+
+      // Replay protection (cross-feature): this exact on-chain payment can't be reused
+      // by an NFT mint OR the lottery.
+      if (await txAlreadyUsed(onchainHash)) {
+        return res.status(400).json({ ok: false, reason: 'payment already used' });
+      }
+
+      // Record ownership.
+      const r = await sb('nft_owned', 'POST', {
+        user_id: tgId,
+        nft_id: nftId,
+        source: 'ton',
+        tx_hash: onchainHash,
+        daily: nft.daily,
+        acquired_at: new Date().toISOString()
+      }, 'return=minimal');
+      if (r.status >= 200 && r.status < 300) {
+        console.log('NFT SUCCESS user=', tgId, 'nft=', nftId);
+        return res.status(200).json({ ok: true, nft_id: nftId, daily: nft.daily });
+      }
+      return res.status(500).json({ ok: false, reason: 'db error ' + r.status });
     }
 
     return res.status(400).json({ ok: false, reason: 'unknown action' });
