@@ -20,6 +20,16 @@ const NFT_CATALOG = {
   cosmic:  { currency: 'ton',   ton: 5,     daily: 5000, supply: 10   }
 };
 
+// TON-priced shop items (NON-NFT). Server-authoritative prices + the durable
+// benefit each one grants. Must match index.html shopItems (verified/vip/premium).
+// type: 'verified' -> verified_player; 'vip' -> 30d VIP; 'premium' -> premium_tier.
+const SHOP_TON = {
+  verifiedPlayer: { ton: 2.5, type: 'verified' },
+  crystalVip:     { ton: 10,  type: 'vip',     days: 30 },
+  vipPass:        { ton: 3,   type: 'premium', tier: 'vip',     days: 30 },
+  premiumPass:    { ton: 1,   type: 'premium', tier: 'premium', days: 30 }
+};
+
 // TON addresses come in several text forms (raw "0:<hex>" and user-friendly
 // base64 "EQ.../UQ..."). The underlying 32-byte account hash is identical in all
 // of them, so we compare by that hash to bind a payment to the buyer's wallet
@@ -118,6 +128,10 @@ async function txAlreadyUsed(hash) {
   try {
     const b = await sb('nft_owned?tx_hash=eq.' + h + '&select=id&limit=1', 'GET');
     if (b.data && b.data.length > 0) return true;
+  } catch (e) {}
+  try {
+    const c = await sb('shop_purchases?tx_hash=eq.' + h + '&select=id&limit=1', 'GET');
+    if (c.data && c.data.length > 0) return true;
   } catch (e) {}
   return false;
 }
@@ -249,7 +263,8 @@ module.exports = async function handler(req, res) {
           amount_ton: LOTTERY_TICKET_TON,
           week_number: week,
           won: false,
-          tx_hash: onchainHash
+          tx_hash: onchainHash,
+          wallet_address: buyerWallet || null
         });
       }
       const r = await sb('lottery_tickets', 'POST', rows, 'return=minimal');
@@ -543,6 +558,91 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true, nft_id: nftId, daily: nft.daily });
       }
       return res.status(500).json({ ok: false, reason: 'db error ' + r.status });
+    }
+
+    // ---- CLAIM TON-PRICED SHOP ITEM (verify on-chain, then set durable benefit) ----
+    // Closes the gap where TON shop items (verified/vip/premium) were activated
+    // client-side only: now the payment is verified on-chain (amount + sender +
+    // recency, replay-protected) and the benefit is written server-side so it
+    // persists across refreshes/devices and can't be faked without paying.
+    if (action === 'shop_claim_ton') {
+      const itemId = String(body.item_id || '');
+      const item = SHOP_TON[itemId];
+      if (!item) return res.status(400).json({ ok: false, reason: 'unknown item' });
+
+      // Trusted current state (for VIP extension).
+      const ur = await sb('users?user_id=eq.' + encodeURIComponent(tgId) +
+        '&select=user_id,vip_until,premium_until&limit=1', 'GET');
+      const user = ur.data && ur.data[0];
+      if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
+
+      // Verify the TON payment on-chain (amount + buyer wallet + recency).
+      const buyerWallet = String(body.wallet_address || '').slice(0, 128);
+      let onchainHash = '';
+      try {
+        const verified = await verifyTonPayment(item.ton, buyerWallet);
+        if (!verified.ok) {
+          console.log('SHOP reject:', verified.reason, 'item=', itemId);
+          return res.status(400).json({ ok: false, reason: verified.reason });
+        }
+        onchainHash = verified.onchainHash;
+      } catch (e) {
+        console.error('SHOP payment verify error:', e.message);
+        return res.status(503).json({ ok: false, reason: 'verify service unavailable' });
+      }
+
+      // Replay protection (cross-feature): this exact payment can't be reused.
+      if (await txAlreadyUsed(onchainHash)) {
+        return res.status(400).json({ ok: false, reason: 'payment already used' });
+      }
+
+      // Build the durable benefit patch.
+      const now = Date.now();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const patch = {};
+      const out = { ok: true, item_id: itemId };
+
+      if (item.type === 'verified') {
+        patch.verified_player = true;
+        out.verified_player = true;
+      }
+      // crystalVip OR a 'vip'-tier premium pass grant 30d VIP (extends if active).
+      if (item.type === 'vip' || (item.type === 'premium' && item.tier === 'vip')) {
+        const base = (user.vip_until && Date.parse(user.vip_until) > now)
+          ? Date.parse(user.vip_until) : now;
+        const vipUntil = new Date(base + (item.days || 30) * DAY_MS).toISOString();
+        patch.vip_member = true;
+        patch.vip_until = vipUntil;
+        out.vip_member = true;
+        out.vip_until = vipUntil;
+      }
+      // premium tier (extends if active).
+      if (item.type === 'premium') {
+        const base = (user.premium_until && Date.parse(user.premium_until) > now)
+          ? Date.parse(user.premium_until) : now;
+        const premiumUntil = new Date(base + (item.days || 30) * DAY_MS).toISOString();
+        patch.premium_tier = item.tier;
+        patch.premium_until = premiumUntil;
+        out.premium_tier = item.tier;
+        out.premium_until = premiumUntil;
+      }
+
+      const pr = await sb('users?user_id=eq.' + encodeURIComponent(tgId), 'PATCH', patch);
+      if (pr.status < 200 || pr.status >= 300) {
+        return res.status(500).json({ ok: false, reason: 'benefit update failed' });
+      }
+
+      // Record the consumed payment (replay protection + audit trail).
+      await sb('shop_purchases', 'POST', {
+        user_id: tgId,
+        item_id: itemId,
+        amount_ton: item.ton,
+        tx_hash: onchainHash,
+        created_at: new Date().toISOString()
+      }, 'return=minimal');
+
+      console.log('SHOP SUCCESS user=', tgId, 'item=', itemId);
+      return res.status(200).json(out);
     }
 
     return res.status(400).json({ ok: false, reason: 'unknown action' });
