@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
   try {
     const r = await sb(
       'users?user_id=eq.' + encodeURIComponent(tgId) +
-      '&select=balance,total_taps,referred_by,referral_count,referral_paid,updated_at,vip_member,vip_until',
+      '&select=balance,total_taps,referred_by,referral_count,referral_paid,updated_at,vip_member,vip_until,premium_tier,premium_until,verified_player',
       'GET'
     );
     if (r.data && r.data.length) existing = r.data[0];
@@ -136,7 +136,10 @@ module.exports = async function handler(req, res) {
         capped: clientBalance > cap,
         bonus: bonusApplied ? WELCOME_BONUS : 0,
         vip_member: serverVip,
-        vip_until: existing && existing.vip_until ? existing.vip_until : null
+        vip_until: existing && existing.vip_until ? existing.vip_until : null,
+        premium_tier: existing && existing.premium_tier ? existing.premium_tier : null,
+        premium_until: existing && existing.premium_until ? existing.premium_until : null,
+        verified_player: existing ? !!existing.verified_player : !!p.verified_player
       });
     }
     return res.status(500).json({ ok: false, reason: 'db error', status: r.status });
