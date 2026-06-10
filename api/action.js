@@ -46,6 +46,12 @@ async function verifyTonPayment(expectedTon, expectedSender) {
   const minNano = BigInt(Math.floor(expectedNano * 0.9));   // tolerate forward fees
   const maxNano = BigInt(Math.floor(expectedNano * 1.1));   // small overpay tolerance
   const wantHash = addrHashHex(expectedSender);
+  // Was a buyer wallet actually supplied? If yes, we REQUIRE an on-chain match to
+  // that wallet (a supplied-but-unparseable address is rejected, so a forged
+  // wallet_address can't "adopt" someone else's same-amount pending payment).
+  // If no wallet was supplied at all, binding is impossible and we fall back to
+  // amount+time only (a legitimate buy is never wrongly blocked).
+  const senderProvided = !!(expectedSender && String(expectedSender).trim());
   const WINDOW_SEC = 30 * 60; // payment must be from the last 30 minutes
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -74,11 +80,11 @@ async function verifyTonPayment(expectedTon, expectedSender) {
         const fresh = ageSec <= WINDOW_SEC;
         const src = String(inMsg.source || '').toLowerCase();
         seen.push({ val: String(inMsg.value || '0'), ageSec, src });
-        // Bind the payment to the buyer's wallet when both addresses are parseable
-        // (airtight). If either can't be parsed, fall back to amount+time so a
-        // legitimate buy is never wrongly blocked.
+        // Bind the payment to the buyer's wallet. When a wallet was supplied it
+        // MUST parse AND match the on-chain sender. Only when no wallet was given
+        // do we accept on amount+time alone (can't bind).
         const srcHash = addrHashHex(inMsg.source);
-        const srcOk = !wantHash || !srcHash || srcHash === wantHash;
+        const srcOk = senderProvided ? (!!wantHash && !!srcHash && srcHash === wantHash) : true;
         if (val >= minNano && val <= maxNano && fresh && srcOk) {
           const hash = (tx.transaction_id && tx.transaction_id.hash)
             ? String(tx.transaction_id.hash)
