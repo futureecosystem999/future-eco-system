@@ -79,6 +79,24 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    if (q === 'hivepot') {
+      const st = await sb('hive_pot?id=eq.1&select=round_number,target_ton,entry_ton,pot_pct&limit=1', 'GET');
+      const s = (st.data && st.data[0]) || { round_number: 1, target_ton: 5, entry_ton: 0.2, pot_pct: 0.25 };
+      const drops = await sb('hive_pot_drops?round_number=eq.' + s.round_number + '&select=id', 'GET');
+      const dropCount = Array.isArray(drops.data) ? drops.data.length : 0;
+      const potTon = +(dropCount * Number(s.entry_ton) * Number(s.pot_pct)).toFixed(4);
+      const last = await sb('hive_pot_winners?select=prize_ton,drops,won_at&order=won_at.desc&limit=1', 'GET');
+      return res.status(200).json({
+        ok: true,
+        round_number: s.round_number,
+        target_ton: Number(s.target_ton),
+        entry_ton: Number(s.entry_ton),
+        drops: dropCount,
+        pot_ton: potTon,
+        last_winner: (last.data && last.data[0]) || null
+      });
+    }
+
     return res.status(400).json({ ok: false, reason: 'unknown q' });
   } catch (e) {
     return res.status(500).json({ ok: false, reason: 'exception' });
