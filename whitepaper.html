@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUTURE Token — Whitepaper v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+        header {
+            background: rgba(0, 221, 180, 0.1);
+            border-bottom: 2px solid #00ddB4;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 48px;
+            color: #00ddB4;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        header p {
+            color: #999;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 221, 180, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .section h2 {
+            color: #00ddB4;
+            font-size: 28px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section h3 {
+            color: #FFD700;
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .section p {
+            margin-bottom: 15px;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .highlight {
+            color: #00ddB4;
+            font-weight: bold;
+        }
+        .warning {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 4px solid #FFD700;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .warning-text {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        /* TOKENOMICS */
+        .tokenomics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .token-stat {
+            background: rgba(0, 221, 180, 0.1);
+            border: 1px solid rgba(0, 221, 180, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .token-stat-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .token-stat-value {
+            color: #00ddB4;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* DISTRIBUTION CHART */
+        .distribution {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+            margin: 30px 0;
+        }
+        .distribution-list {
+            list-style: none;
+        }
+        .distribution-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(0, 221, 180, 0.05);
+            border-radius: 6px;
+            border-left: 4px solid #00ddB4;
+        }
+        .distribution-list li span:first-child {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .distribution-list li span:last-child {
+            color: #00ddB4;
+            font-weight: bold;
+        }
+        .pie-chart {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #00ddB4 0% 40%,
+                #4169E1 40% 60%,
+                #FFD700 60% 75%,
+                #FF6B6B 75% 85%,
+                #50C878 85% 93%,
+                #9370DB 93% 100%
+            );
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(0, 221, 180, 0.3);
+        }
+
+        /* ROADMAP */
+        .roadmap {
+            display: grid;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .roadmap-phase {
+            background: rgba(0, 221, 180, 0.05);
+            border-left: 4px solid #00ddB4;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .roadmap-phase.active {
+            border-left-color: #50C878;
+            background: rgba(80, 200, 120, 0.1);
+        }
+        .roadmap-phase.active::before {
+            content: "✓ LIVE";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #50C878;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .roadmap-phase h3 {
+            color: #00ddB4;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .roadmap-phase .milestone-tag {
+            background: rgba(0, 221, 180, 0.2);
+            color: #00ddB4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .roadmap-phase p {
+            font-size: 14px;
+            color: #ccc;
+        }
+        .roadmap-phase ul {
+            list-style: none;
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .roadmap-phase ul li {
+            margin: 5px 0;
+            color: #bbb;
+        }
+        .roadmap-phase ul li::before {
+            content: "▸ ";
+            color: #00ddB4;
+            margin-right: 8px;
+        }
+
+        /* TGE CALCULATOR */
+        .tge-calculator {
+            background: rgba(0, 221, 180, 0.1);
+            border: 2px solid #00ddB4;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+        .calc-input-group {
+            margin-bottom: 20px;
+        }
+        .calc-input-group label {
+            display: block;
+            color: #00ddB4;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .calc-input-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 221, 180, 0.3);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+        }
+        .calc-input-group input::placeholder {
+            color: #666;
+        }
+        .calc-results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .calc-result-box {
+            background: rgba(0, 221, 180, 0.05);
+            border: 1px solid rgba(0, 221, 180, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .calc-result-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .calc-result-value {
+            color: #00ddB4;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* PROGRESS */
+        .progress-section {
+            background: rgba(0, 221, 180, 0.1);
+            border: 2px solid #00ddB4;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .progress-stat {
+            font-size: 32px;
+            color: #00ddB4;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .progress-bar-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+            margin: 20px 0;
+            border: 1px solid rgba(0, 221, 180, 0.3);
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ddB4, #00ff88);
+            width: 3%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .progress-milestone {
+            color: #00ddB4;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: #666;
+            border-top: 1px solid rgba(0, 221, 180, 0.2);
+            margin-top: 50px;
+        }
+        footer p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 32px;
+            }
+            .tokenomics-grid,
+            .distribution,
+            .calc-results {
+                grid-template-columns: 1fr;
+            }
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+
+    <header>
+        <h1>🐝 FUTURE Token</h1>
+        <p>Whitepaper v2.0 | 2026 · FUTURE-eco-system</p>
+    </header>
+
+    <div class="container">
+
+        <div class="warning" style="margin-bottom:30px;">
+            <span class="warning-text">⚠️ Please read first</span>
+            <p style="margin-top:10px;color:#ddd;">
+                FUTURE is currently an <span class="highlight">in-game utility token with no monetary value</span>.
+                This document describes plans and aspirations that are <strong>not guaranteed</strong> and may change.
+                It is not financial advice and not an offer of any security or investment. See Section 9.
+                The app contains <strong>games of chance — 18+ only</strong>.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>📋 1. Abstract</h2>
+            <p>
+                FUTURE-eco-system is a <span class="highlight">Telegram-based, tap-to-earn game</span> built on the TON blockchain.
+                Players earn in-game FUTURE tokens by tapping the Crystal Bee, completing daily missions, playing mini-games,
+                collecting NFTs, and inviting friends.
+            </p>
+            <p>
+                FUTURE is an <span class="highlight">in-game token</span> used inside the app (shop, breeding, games). It currently has
+                no cash value and is not tradable. Our long-term <em>goal</em> is to grow the community and, if conditions allow,
+                explore launching FUTURE as a real token on TON — but this is a plan, not a promise (see Roadmap &amp; Disclaimers).
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>🎮 2. What You Can Do Today</h2>
+            <p>The game is live now. Current features:</p>
+            <ul style="margin-left:18px;line-height:2;">
+                <li>👆 <span class="highlight">Tap-to-earn</span> — tap the Crystal Bee that visually evolves through levels.</li>
+                <li>🎁 <span class="highlight">Daily login</span> (10-day cycle), daily missions, treasure chests.</li>
+                <li>🎰 <span class="highlight">Mini-games</span> — Coinflip, Slots, Crash, Mines, Lucky Spin.</li>
+                <li>🐝💎 <span class="highlight">Crystal NFTs</span> that generate a daily in-game yield.</li>
+                <li>🎲 <span class="highlight">Weekly TON Lottery</span> &amp; 🍯 <span class="highlight">Hive Pot</span> — buy in with TON; one winner takes a prize. Paid out on-chain.</li>
+                <li>🧬 <span class="highlight">Bee breeding</span>, 👥 <span class="highlight">referrals</span>, 🏆 <span class="highlight">leaderboards</span>, multi-language UI.</li>
+            </ul>
+            <p style="margin-top:12px;">
+                A shared <span class="highlight">Jackpot Pool</span> is funded by in-game spending (shop, breeding, games) — nothing is burned.
+                It is redistributed to the community. All TON payments flow through official <span class="highlight">TonConnect</span> and are
+                publicly verifiable on the TON blockchain.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>🚀 3. Token Launch Plan (aspirational)</h2>
+            <p>
+                FUTURE is <span class="highlight">in-game only</span> today. Our <em>goal</em> is to deploy FUTURE as a TON Jetton once the community
+                reaches <span class="highlight">100,000 active players</span> — provided it is legally and technically feasible at that time.
+                A larger community first means a healthier, fairer launch.
+            </p>
+            <div class="warning">
+                <span class="warning-text">📌 About your in-game balance</span>
+                <p style="margin-top:10px;color:#ddd;">
+                    If — and only if — a token launch happens, your in-game activity <em>may</em> be considered when designing any future
+                    allocation. This is <strong>not a guarantee</strong> of tokens, value, timing, or eligibility, and the rules could change or a launch may never occur.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💎 4. Token Overview (planned)</h2>
+            <p style="margin-bottom:15px;color:#ccc;font-size:14px;">The token is not yet deployed. The figures below are planned parameters and may change.</p>
+            <div class="tokenomics-grid">
+                <div class="token-stat"><div class="token-stat-label">Token Name</div><div class="token-stat-value">FUTURE</div></div>
+                <div class="token-stat"><div class="token-stat-label">Blockchain</div><div class="token-stat-value">TON</div></div>
+                <div class="token-stat"><div class="token-stat-label">Planned Supply</div><div class="token-stat-value">1,000,000,000</div></div>
+                <div class="token-stat"><div class="token-stat-label">Decimals</div><div class="token-stat-value">9</div></div>
+                <div class="token-stat"><div class="token-stat-label">Planned Standard</div><div class="token-stat-value">Jetton (TON)</div></div>
+                <div class="token-stat"><div class="token-stat-label">Status</div><div class="token-stat-value" style="color:#FFD700;">Not yet deployed</div></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 5. Planned Token Distribution</h2>
+            <p style="margin-bottom:15px;color:#ccc;font-size:14px;">Indicative only — subject to change before any launch.</p>
+            <div class="distribution">
+                <ul class="distribution-list">
+                    <li><span>🎮 Play-to-Earn</span><span>40% (400M)</span></li>
+                    <li><span>💧 Liquidity</span><span>20% (200M)</span></li>
+                    <li><span>👥 Team</span><span>15% (150M)</span></li>
+                    <li><span>📢 Marketing</span><span>10% (100M)</span></li>
+                    <li><span>🤝 Partners</span><span>8% (80M)</span></li>
+                    <li><span>🔒 Reserve</span><span>7% (70M)</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🗺️ 6. Roadmap — Community Milestones</h2>
+            <p style="margin-bottom:15px;color:#ccc;font-size:14px;">Forward-looking and non-binding. Items may change, slip, or not happen.</p>
+            <div class="roadmap">
+                <div class="roadmap-phase active">
+                    <h3>Phase 1 — Launch <span class="milestone-tag">LIVE NOW ✓</span></h3>
+                    <p>Mini App · Crystal Bee · TON wallet (TonConnect) · Casino mini-games · NFTs · Lottery &amp; Hive Pot · Referrals · Leaderboard · Multi-language</p>
+                </div>
+                <div class="roadmap-phase">
+                    <h3>Phase 2 — Token Launch (goal) <span class="milestone-tag">100,000 players</span></h3>
+                    <p>Target: deploy FUTURE Jetton on TON · explore a DEX listing (TBD) · community allocation event</p>
+                    <ul>
+                        <li>Early supporters may receive recognition/bonuses (subject to final tokenomics)</li>
+                        <li>Liquidity to be established if feasible</li>
+                        <li>All subject to legal and technical review</li>
+                    </ul>
+                </div>
+                <div class="roadmap-phase">
+                    <h3>Phase 3 — Expansion <span class="milestone-tag">250,000 players</span></h3>
+                    <p>Explore additional exchange listings (TBD) · staking concept · expanded NFT collection</p>
+                </div>
+                <div class="roadmap-phase">
+                    <h3>Phase 4 — Ecosystem <span class="milestone-tag">500,000+ players</span></h3>
+                    <p>Community governance · deeper DeFi integration · further ecosystem growth (aspirational)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 7. Hypothetical Allocation Estimator</h2>
+            <div class="warning" style="margin-bottom:18px;">
+                <span class="warning-text">Illustration only — not a promise</span>
+                <p style="margin-top:10px;color:#ddd;">
+                    This tool is a <strong>hypothetical illustration</strong> for fun. It does <strong>not</strong> represent a promise of tokens, a price,
+                    or any value. There is no guarantee a token will launch or be worth anything. Do not make financial decisions based on it.
+                </p>
+            </div>
+            <div class="tge-calculator">
+                <div class="calc-input-group">
+                    <label>Your FUTURE Balance (in-game)</label>
+                    <input type="number" id="futureBalance" placeholder="Enter your current balance" value="0">
+                </div>
+                <div class="calc-input-group">
+                    <label>Hypothetical TON Price (you choose)</label>
+                    <input type="number" id="tonPrice" placeholder="e.g. 0.5" value="0.5">
+                </div>
+                <div class="calc-results">
+                    <div class="calc-result-box"><div class="calc-result-label">In-game Balance</div><div class="calc-result-value" id="tgeTokens">0</div></div>
+                    <div class="calc-result-box"><div class="calc-result-label">Example Multiplier</div><div class="calc-result-value" id="bonusMultiplier">1.5x</div></div>
+                    <div class="calc-result-box"><div class="calc-result-label">Hypothetical Total</div><div class="calc-result-value" id="totalBonus">0</div></div>
+                    <div class="calc-result-box"><div class="calc-result-label">Illustrative Only</div><div class="calc-result-value" id="estValue">0</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📈 8. Community Growth</h2>
+            <div class="progress-section">
+                <div style="font-size:16px;color:#00ddB4;margin-bottom:10px;">🎯 Phase 2 goal: 100,000 players</div>
+                <div class="progress-stat">Early stage — growing 🌱</div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width:3%;">&nbsp;</div>
+                </div>
+                <div class="progress-milestone">
+                    ⏳ Token launch is a goal for when we reach 100,000 players — there is no fixed date.
+                </div>
+                <p style="margin-top:20px;color:#ccc;font-size:14px;">
+                    ℹ️ A bigger community means a healthier launch. Invite friends to help us grow 🚀
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚠️ 9. Risks &amp; Disclaimers</h2>
+            <div class="warning">
+                <span class="warning-text">Important — please read</span>
+                <p style="margin-top:10px;color:#ddd;line-height:1.9;">
+                    <strong>Not financial advice &amp; no offer.</strong> This document is for information only. It is not financial, legal, or investment advice, and not a solicitation or offer of any security, token sale, or investment.<br><br>
+                    <strong>No guarantees.</strong> FUTURE is an in-game token with no monetary value today. We do not guarantee any token launch, listing, price, value, timing, allocation, or that any roadmap item will happen. Forward-looking statements may not materialize.<br><br>
+                    <strong>Games of chance — 18+.</strong> The app includes games of chance (casino mini-games, lottery, jackpot pot). You must be of legal age in your jurisdiction. These features may be restricted or prohibited where you live — you are responsible for complying with your local laws, and you should not participate where prohibited.<br><br>
+                    <strong>Play responsibly.</strong> Only spend what you can afford to lose. Crypto and gaming carry significant risk, including total loss. If gambling becomes a problem, seek help.<br><br>
+                    <strong>Do your own research (DYOR).</strong> Nothing here should be relied upon for financial decisions.
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align:center;padding:30px 0;color:#999;">
+            <p>🐝 Building the future, one tap at a time 💎</p>
+            <p style="margin-top:8px;font-size:13px;">For more info: @futureecosystem on Telegram</p>
+            <p style="margin-top:14px;font-size:12px;">© 2026 FUTURE-eco-system. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        const futureInput = document.getElementById('futureBalance');
+        const tonPriceInput = document.getElementById('tonPrice');
+        const tgeTokensEl = document.getElementById('tgeTokens');
+        const totalBonusEl = document.getElementById('totalBonus');
+        const estValueEl = document.getElementById('estValue');
+        function calculateTGE() {
+            const balance = parseFloat(futureInput.value) || 0;
+            const tonPrice = parseFloat(tonPriceInput.value) || 0;
+            const bonusMultiplier = 1.5;
+            const total = Math.floor(balance * bonusMultiplier);
+            tgeTokensEl.innerText = balance.toLocaleString();
+            totalBonusEl.innerText = total.toLocaleString();
+            // Illustrative only — deliberately shown as a non-committal label.
+            estValueEl.innerText = 'hypothetical';
+        }
+        futureInput.addEventListener('input', calculateTGE);
+        tonPriceInput.addEventListener('input', calculateTGE);
+        calculateTGE();
+    </script>
+</body>
+</html>
