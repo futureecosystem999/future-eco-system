@@ -6,6 +6,8 @@ const { sb } = require('./_db.js');
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const LOTTERY_TICKET_TON = 0.1;
 const MAX_TICKETS_PER_CALL = 100;
+const HIVE_DROP_TON = 0.2;          // HIVE POT: vieno „lašo" kaina
+const MAX_DROPS_PER_CALL = 100;
 const OWNER_WALLET = 'UQCcc-bk_qaS30QXZgpMmpY3rTEJL7YmMLcYNYwJhEhRpiZE'; // Projekto piniginė — turi sutapti su index.html mokėjimo adresu
 
 const TONCENTER_KEY = '4301f696f9e1ff6dcb3ce9e75daa33b297d4750ef094585cda451c2552190acc';
@@ -132,6 +134,10 @@ async function txAlreadyUsed(hash) {
   try {
     const c = await sb('shop_purchases?tx_hash=eq.' + h + '&select=id&limit=1', 'GET');
     if (c.data && c.data.length > 0) return true;
+  } catch (e) {}
+  try {
+    const d = await sb('hive_pot_drops?tx_hash=eq.' + h + '&select=id&limit=1', 'GET');
+    if (d.data && d.data.length > 0) return true;
   } catch (e) {}
   return false;
 }
@@ -643,6 +649,57 @@ module.exports = async function handler(req, res) {
 
       console.log('SHOP SUCCESS user=', tgId, 'item=', itemId);
       return res.status(200).json(out);
+    }
+
+    // ---- HIVE POT: buy drops (verify TON on-chain, add to current round) ----
+    if (action === 'hive_pot_buy') {
+      let count = parseInt(body.count, 10);
+      if (!Number.isFinite(count) || count < 1) count = 1;
+      if (count > MAX_DROPS_PER_CALL) count = MAX_DROPS_PER_CALL;
+      const totalTon = +(count * HIVE_DROP_TON).toFixed(4);
+
+      // Verify the TON payment on-chain (amount + buyer wallet + recency, replay-protected).
+      const buyerWallet = String(body.wallet_address || '').slice(0, 128);
+      let onchainHash = '';
+      try {
+        const verified = await verifyTonPayment(totalTon, buyerWallet);
+        if (!verified.ok) {
+          console.log('HIVE reject:', verified.reason);
+          return res.status(400).json({ ok: false, reason: verified.reason });
+        }
+        onchainHash = verified.onchainHash;
+      } catch (e) {
+        console.error('HIVE verify error:', e.message);
+        return res.status(503).json({ ok: false, reason: 'verify service unavailable' });
+      }
+      if (await txAlreadyUsed(onchainHash)) {
+        return res.status(400).json({ ok: false, reason: 'payment already used' });
+      }
+
+      // Current round.
+      const hp = await sb('hive_pot?id=eq.1&select=round_number,entry_ton,pot_pct,target_ton&limit=1', 'GET');
+      const pot = hp.data && hp.data[0];
+      if (!pot) return res.status(500).json({ ok: false, reason: 'hive_pot not initialised' });
+      const round = pot.round_number;
+
+      // Insert the drops for this round.
+      const rows = [];
+      for (let i = 0; i < count; i++) {
+        rows.push({
+          round_number: round,
+          user_id: tgId,
+          wallet_address: buyerWallet || null,
+          amount_ton: HIVE_DROP_TON,
+          tx_hash: onchainHash,
+          created_at: new Date().toISOString()
+        });
+      }
+      const r = await sb('hive_pot_drops', 'POST', rows, 'return=minimal');
+      if (r.status < 200 || r.status >= 300) {
+        return res.status(500).json({ ok: false, reason: 'db error ' + r.status });
+      }
+      console.log('HIVE SUCCESS user=', tgId, 'drops=', count, 'round=', round);
+      return res.status(200).json({ ok: true, drops: count, round_number: round });
     }
 
     return res.status(400).json({ ok: false, reason: 'unknown action' });
