@@ -200,7 +200,7 @@ module.exports = async function handler(req, res) {
 
   if (text.startsWith('/start')) {
     await sendMessage(chatId,
-      `🐝 <b>Welcome to FUTURE-eco-system!</b>\n\nTap the Crystal Bee, earn FUTURE tokens and be part of the next TON blockchain launch!\n\n🎯 Token launches at <b>50,000 players!</b>\n\n<b>Commands:</b>\n/balance — Your token balance\n/stats — Community stats\n/top — Top 10 players\n/referral — Your referral link\n/progress — Token launch progress\n/help — Help`,
+      `🐝 <b>Welcome to FUTURE-eco-system!</b>\n\nTap the Crystal Bee, earn FUTURE tokens and be part of the next TON blockchain launch!\n\n🎯 Token launches at <b>100,000 players!</b>\n\n<b>Commands:</b>\n/balance — Your token balance\n/stats — Community stats\n/top — Top 10 players\n/referral — Your referral link\n/progress — Token launch progress\n/help — Help`,
       [
         [{ text: '🎮 Play Game', web_app: { url: GAME } }],
         [{ text: '🌐 Website', url: LANDING }, { text: '📊 Live Stats', url: STATS }],
@@ -213,7 +213,7 @@ module.exports = async function handler(req, res) {
     const user = await getUser(userId);
     if (user) {
       await sendMessage(chatId,
-        `💰 <b>Your Balance</b>\n\n🐝 <b>${(user.balance||0).toLocaleString()} FUTURE</b>\n📊 Level: ${user.level || 1}\n👆 Total taps: ${(user.total_taps||0).toLocaleString()}\n\n🎯 Token launch at 50,000 players!`,
+        `💰 <b>Your Balance</b>\n\n🐝 <b>${(user.balance||0).toLocaleString()} FUTURE</b>\n📊 Level: ${user.level || 1}\n👆 Total taps: ${(user.total_taps||0).toLocaleString()}\n\n🎯 Token launch at 100,000 players!`,
         [
           [{ text: '🎮 Play & Earn More', web_app: { url: GAME } }],
           [{ text: '📊 Community Stats', url: STATS }]
@@ -231,9 +231,9 @@ module.exports = async function handler(req, res) {
     if (users && users.length) {
       const totalTaps = users.reduce((s, u) => s + (u.total_taps || 0), 0);
       const totalTokens = users.reduce((s, u) => s + (u.balance || 0), 0);
-      const pct = ((users.length / 50000) * 100).toFixed(2);
+      const pct = ((users.length / 100000) * 100).toFixed(2);
       await sendMessage(chatId,
-        `📊 <b>Community Stats</b>\n\n👥 Players: <b>${users.length.toLocaleString()}</b>\n👆 Total taps: <b>${totalTaps.toLocaleString()}</b>\n💰 Total earned: <b>${totalTokens.toLocaleString()} FUTURE</b>\n\n🎯 TGE Progress: <b>${pct}%</b> (${users.length} / 50,000)\n\n🚀 Token launches at 50,000 players!`,
+        `📊 <b>Community Stats</b>\n\n👥 Players: <b>${users.length.toLocaleString()}</b>\n👆 Total taps: <b>${totalTaps.toLocaleString()}</b>\n💰 Total earned: <b>${totalTokens.toLocaleString()} FUTURE</b>\n\n🎯 TGE Progress: <b>${pct}%</b> (${users.length} / 100,000)\n\n🚀 Token launches at 100,000 players!`,
         [
           [{ text: '🌐 Live Stats Page', url: STATS }],
           [{ text: '🎮 Play Game', web_app: { url: GAME } }]
@@ -273,12 +273,12 @@ module.exports = async function handler(req, res) {
   } else if (text === '/progress') {
     const users = await getAllUsers();
     const count = users ? users.length : 0;
-    const pct = ((count / 50000) * 100).toFixed(2);
-    const remaining = Math.max(50000 - count, 0);
+    const pct = ((count / 100000) * 100).toFixed(2);
+    const remaining = Math.max(100000 - count, 0);
     const filled = Math.floor(parseFloat(pct) / 5);
     const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
     await sendMessage(chatId,
-      `🎯 <b>Token Launch Progress</b>\n\n${bar}\n<b>${pct}%</b> — ${count.toLocaleString()} / 50,000 players\n\n⏳ <b>${remaining.toLocaleString()} players remaining</b> until FUTURE token launches on TON mainnet!\n\n🚀 Invite friends to speed it up!`,
+      `🎯 <b>Token Launch Progress</b>\n\n${bar}\n<b>${pct}%</b> — ${count.toLocaleString()} / 100,000 players\n\n⏳ <b>${remaining.toLocaleString()} players remaining</b> until FUTURE token launches on TON mainnet!\n\n🚀 Invite friends to speed it up!`,
       [
         [{ text: '📤 Invite Friends', url: `https://t.me/share/url?url=https://t.me/FutureEcoSystemBot&text=🐝 Join FUTURE-eco-system and earn crypto!` }],
         [{ text: '🌐 Website', url: LANDING }, { text: '📊 Live Stats', url: STATS }]
@@ -287,7 +287,7 @@ module.exports = async function handler(req, res) {
 
   } else if (text === '/help') {
     await sendMessage(chatId,
-      `🐝 <b>FUTURE-eco-system Help</b>\n\n<b>Commands:</b>\n/start — Start the bot\n/balance — Your FUTURE balance\n/stats — Community statistics\n/top — Top 10 players\n/referral — Your referral link\n/progress — Token launch progress\n/help — This message\n\n<b>How to earn:</b>\n🎮 Tap the Crystal Bee\n✅ Complete daily missions\n👥 Invite friends (+500 FUTURE each)\n🎰 Daily spin wheel\n🐝 Bee Catcher mini game\n\n<b>Token launch at 50,000 players!</b>`,
+      `🐝 <b>FUTURE-eco-system Help</b>\n\n<b>Commands:</b>\n/start — Start the bot\n/balance — Your FUTURE balance\n/stats — Community statistics\n/top — Top 10 players\n/referral — Your referral link\n/progress — Token launch progress\n/help — This message\n\n<b>How to earn:</b>\n🎮 Tap the Crystal Bee\n✅ Complete daily missions\n👥 Invite friends (+500 FUTURE each)\n🎰 Daily spin wheel\n🐝 Bee Catcher mini game\n\n<b>Token launch at 100,000 players!</b>`,
       [
         [{ text: '🎮 Play Game', web_app: { url: GAME } }],
         [{ text: '🌐 Website', url: LANDING }, { text: '📊 Stats', url: STATS }],
