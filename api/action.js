@@ -290,9 +290,38 @@ module.exports = async function handler(req, res) {
 
       const user = await getUser(tgId);
       if (!user) return res.status(400).json({ ok: false, reason: 'user not found' });
-      if (Math.floor(Number(user.balance) || 0) < amount) {
+      const bal = Math.floor(Number(user.balance) || 0);
+      if (bal < amount) {
         return res.status(400).json({ ok: false, reason: 'insufficient balance' });
       }
+
+      // Anti-stacking: the TOTAL of all still-pending requests plus this new one
+      // must not exceed the player's real balance. Without this, a user with
+      // balance B could spam many "pending" requests (e.g. 10×B) and, at manual
+      // payout time, be overpaid. We don't deduct the balance here (withdrawals
+      // are queued for Phase 2, so tokens must stay visible/usable) — we only cap
+      // the queued total. The amount is re-validated against balance at payout.
+      let pendingSum = 0;
+      try {
+        const pend = await sb('withdraw_requests?user_id=eq.' + encodeURIComponent(tgId) +
+          '&status=eq.pending&select=amount', 'GET');
+        if (pend.data && Array.isArray(pend.data)) {
+          pendingSum = pend.data.reduce((s, w) => s + (Math.floor(Number(w.amount) || 0)), 0);
+        }
+      } catch (e) {
+        // If we cannot read existing requests, fail safe (do NOT create another).
+        console.error('withdraw pending-read error:', e.message);
+        return res.status(503).json({ ok: false, reason: 'try again' });
+      }
+      if (pendingSum + amount > bal) {
+        return res.status(400).json({
+          ok: false,
+          reason: 'pending requests already cover your balance',
+          pending: pendingSum,
+          balance: bal
+        });
+      }
+
       const r = await sb('withdraw_requests', 'POST', {
         user_id: tgId,
         username: user.username || 'Player',
@@ -707,5 +736,3 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, reason: 'exception' });
   }
 }
-
-
