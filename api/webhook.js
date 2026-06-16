@@ -1,5 +1,9 @@
 // Secrets come ONLY from Vercel Environment Variables. No hardcoded fallbacks.
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
+// Shared secret echoed back by Telegram in the X-Telegram-Bot-Api-Secret-Token
+// header (set once via setWebhook?secret_token=...). Used to prove an incoming
+// update really came from Telegram and not a forged request.
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
 const SB_URL = process.env.SB_URL || '';
 // Server-side reads use the SERVICE key (kept secret on the server, never shipped to a browser).
 const SB_KEY = process.env.SB_SERVICE_KEY || '';
@@ -141,6 +145,23 @@ async function creditPurchase(userId, productId, starsAmount, chargeId) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true });
+
+  // ---- SECURITY: verify the request genuinely came from Telegram ----
+  // Without this, anyone who learns the webhook URL could POST a fake
+  // `successful_payment` (choosing their own user id + charge id) and credit
+  // themselves FUTURE / VIP / NFT for free. Telegram returns the secret you set
+  // via setWebhook(secret_token=...) in this header on EVERY update.
+  // Enforced only once WEBHOOK_SECRET is configured, so deploying this file
+  // before you set the env var + re-register the webhook will NOT break the bot.
+  if (WEBHOOK_SECRET) {
+    const got = req.headers['x-telegram-bot-api-secret-token'] || '';
+    if (got !== WEBHOOK_SECRET) {
+      console.warn('WEBHOOK rejected: bad/missing secret token');
+      return res.status(401).json({ ok: false });
+    }
+  } else {
+    console.warn('WEBHOOK_SECRET not set — webhook is UNVERIFIED. Set the env var and re-run setWebhook with secret_token to secure payments.');
+  }
 
   const update = req.body;
 
